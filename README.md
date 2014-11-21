@@ -47,11 +47,9 @@ process.stdin.pipe(t);
 
 ## Methods
 
-### var t = tapOut(callback)
+### var t = tapOut(function (err, output) {})
 
-Returns a stream that emits events with various TAP data.
-
-* `callback` - gets called when all parsing is done with the parsing data with signature `function (err, output) {}`
+Returns a stream that emits events with various TAP data. Takes a callback which is called when all parsing is done.
 
 ## Events
 
@@ -82,6 +80,10 @@ Parsed assertion that has passed with details
 ### t.on('fail', function (pass) {})
 
 Failed assertion that has passed with details
+
+### t.on('comment', function (comment) {})
+
+Generic output like `console.log()` in your tests
 
 ## Run Test
 

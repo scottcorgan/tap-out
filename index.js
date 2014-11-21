@@ -6,7 +6,7 @@ var trim = require('trim');
 var expr = require('./lib/utils/regexes');
 var parseLine = require('./lib/parse-line');
 
-var tapper = function (done) {
+module.exports = function (done) {
   
   done = done || function () {};
   
@@ -67,7 +67,7 @@ var tapper = function (done) {
     })
     .on('close', function () {
       
-      stream.emit('results', results);
+      stream.emit('output', results);
       done(null, results);
     })
     .on('error', done);
@@ -131,17 +131,17 @@ function isErrorOutputEnd (line) {
 
 ////////////////////////////
 
-var input = through();
-fs.createReadStream(__dirname  + '/test-tap.txt')
-  .pipe(input);
+// var input = through();
+// fs.createReadStream(__dirname  + '/test-tap.txt')
+//   .pipe(input);
 
-var t = tapper(function (err, results) {
+// var t = tapper(function (err, results) {
   
-  console.log(results);
-});
+//   console.log(results);
+// });
 
-input
-  .pipe(t);
+// input
+//   .pipe(t);
   
 
 // t.on('fail', function (fail) {

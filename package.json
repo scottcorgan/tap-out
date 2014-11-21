@@ -6,8 +6,8 @@
   "scripts": {
     "test": "tape test/index.js"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Scott Corgan",
+  "license": "MIT",
   "dependencies": {
     "split": "^0.3.1",
     "through2": "^0.6.3",
@@ -15,5 +15,23 @@
   },
   "devDependencies": {
     "tape": "^3.0.3"
-  }
+  },
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scottcorgan/tapper.git"
+  },
+  "keywords": [
+    "tap",
+    "parser",
+    "tape",
+    "tap-spec",
+    "test"
+  ],
+  "bugs": {
+    "url": "https://github.com/scottcorgan/tapper/issues"
+  },
+  "homepage": "https://github.com/scottcorgan/tapper"
 }

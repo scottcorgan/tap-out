@@ -1,0 +1,19 @@
+{
+  "name": "tapper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "split": "^0.3.1",
+    "through2": "^0.6.3",
+    "trim": "0.0.1"
+  },
+  "devDependencies": {
+    "tape": "^3.0.3"
+  }
+}

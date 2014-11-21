@@ -1,0 +1,26 @@
+TAP version 13
+# is true
+ok 1 true value
+ok 2 true value
+not ok 3 strings match
+  ---
+    operator: equal
+    expected: 'me2'
+    actual:   'me'
+    at: Test.<anonymous> (/Users/scott/www/divshot/divshot-cli/test/index.js:8:5)
+  ...
+ok 4 true value
+ok 5 true value
+ok 6 true value
+ok 7 true value
+here
+# false values
+ok 8 should be false
+ok 9 false value
+ok 10 should have been a false value
+ok 11 false value
+
+1..11
+# tests 11
+# pass  10
+# fail  1

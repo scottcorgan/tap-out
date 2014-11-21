@@ -6,6 +6,9 @@
   "scripts": {
     "test": "tape test/index.js"
   },
+  "bin": {
+    "tap-out": "bin/cmd.js"
+  },
   "author": "Scott Corgan",
   "license": "MIT",
   "dependencies": {

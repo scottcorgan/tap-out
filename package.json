@@ -1,10 +1,10 @@
 {
   "name": "tapper",
   "version": "1.0.0",
-  "description": "",
+  "description": "A different tap parser",
   "main": "index.js",
   "scripts": {
-    "test": "tape test/"
+    "test": "tape test/index.js"
   },
   "author": "",
   "license": "ISC",

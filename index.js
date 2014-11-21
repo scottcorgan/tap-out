@@ -20,8 +20,7 @@ module.exports = function (done) {
     versions: [],
     results: [],
     pass: [],
-    fail: [],
-    error: []
+    fail: []
   };
   
   stream
@@ -124,32 +123,3 @@ function isErrorOutputEnd (line) {
   
   return line.indexOf('  ...') === 0;
 }
-
-
-
-
-
-////////////////////////////
-
-// var input = through();
-// fs.createReadStream(__dirname  + '/test-tap.txt')
-//   .pipe(input);
-
-// var t = tapper(function (err, results) {
-  
-//   console.log(results);
-// });
-
-// input
-//   .pipe(t);
-  
-
-// t.on('fail', function (fail) {
-  
-//   console.log(fail);
-// });
-
-// t.on('pass', function (pass) {
-  
-//   console.log(pass);
-// });

@@ -183,11 +183,11 @@ Fail
 
 ### t.on('pass', function (assertion) {})
 
-Parsed assertion that has passed with details. The assertion formate is the same as the [`assert`]() event.
+Parsed assertion that has passed with details. The assertion formate is the same as the [`assert`](#tonassert-function-assertion-) event.
 
 ### t.on('fail', function (assertion) {})
 
-Failed assertion that has passed with details. The assertion formate is the same as the [`assert`]() event.
+Failed assertion that has passed with details. The assertion formate is the same as the [`assert`](#tonassert-function-assertion-) event.
 
 ### t.on('comment', function (comment) {})
 

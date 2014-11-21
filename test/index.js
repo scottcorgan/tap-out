@@ -1,8 +1,5 @@
-var fs = require('fs');
 var parser = require('../');
 var test = require('tape');
-var through = require('through2');
-
 
 test('tests', function (t) {
   

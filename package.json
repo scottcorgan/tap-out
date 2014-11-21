@@ -1,5 +1,5 @@
 {
-  "name": "tapper",
+  "name": "tap-out",
   "version": "0.1.0",
   "description": "A different tap parser",
   "main": "index.js",
@@ -21,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/scottcorgan/tapper.git"
+    "url": "https://github.com/scottcorgan/tap-out.git"
   },
   "keywords": [
     "tap",
@@ -31,7 +31,7 @@
     "test"
   ],
   "bugs": {
-    "url": "https://github.com/scottcorgan/tapper/issues"
+    "url": "https://github.com/scottcorgan/tap-out/issues"
   },
-  "homepage": "https://github.com/scottcorgan/tapper"
+  "homepage": "https://github.com/scottcorgan/tap-out"
 }

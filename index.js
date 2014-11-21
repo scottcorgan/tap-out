@@ -1,4 +1,3 @@
-var fs = require('fs');
 var through = require('through2');
 var split = require('split');
 var trim = require('trim');

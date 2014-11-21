@@ -19,8 +19,9 @@ module.exports = function (done) {
     asserts: [],
     versions: [],
     results: [],
+    comments: [],
     pass: [],
-    fail: []
+    fail: [],
   };
   
   stream
@@ -36,6 +37,18 @@ module.exports = function (done) {
       
       // This will handle all the error stuff
       handleError(line);
+      
+      // THis is weird, but it's the only way to distinguish a
+      // console.log type output from an error output
+      if (!writingErrorOutput && !parsed && !isErrorOutputEnd(line)) {
+        var comment = {
+          type: 'comment',
+          raw: line,
+          test: testNumber
+        };
+        stream.emit('comment', comment);
+        results.comments.push(comment);
+      }
       
       // Invalid line
       if (!parsed) {
@@ -117,8 +130,7 @@ module.exports = function (done) {
         if (m[0] === 'actual') {
           lastAssert.error.actual = trim(m[1]);
         }
-      }
-      
+      }      
       
       lastAssert.error[m[0]] = msg;
     }

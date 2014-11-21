@@ -29,7 +29,8 @@ test('output event', function (t) {
       tests: [
         { name: 'is true', number: 1, raw: '# is true', type: 'test' }
       ],
-      versions: []
+      versions: [],
+      comments: []
     }, 'output data');
   });
   
@@ -66,7 +67,8 @@ test('output callback', function (t) {
       tests: [
         { name: 'is true', number: 1, raw: '# is true', type: 'test' }
       ],
-      versions: []
+      versions: [],
+      comments: []
     }, 'output data');
   });
   
@@ -341,6 +343,61 @@ test('fail', function (t) {
   p.on('fail', function (fail) {
     
     fails.push(fail);
+  });
+  
+  mockTap.forEach(function (line) {
+    
+    p.write(line + '\n');
+  });
+  p.end();
+});
+
+
+// NOTE: comments output the same as test names.
+// This makes it very difficult to parse them.
+// Ignoring them for now. Just don't use comments.
+test('comments');
+
+test('generic output', function (t) {
+  
+  var mockTap = [
+    "TAP version 13",
+    "# is true",
+    "ok 1 true value",
+    "not ok 2 strings match",
+    "  ---",
+    "    operator: equal",
+    "    expected: 'you'",
+    "    actual:   'me'",
+    "    at: Test.<anonymous> (/Users/scott/www/divshot/divshot-cli/test/index.js:8:5)",
+    "  ...",
+    "ok 3 true value",
+    "this is a console log",
+    "# false values",
+    "ok 4 should be false",
+    "ok 5 false value"
+  ];
+  
+  var comments = [];
+  var p = parser(function (err, output) {
+    
+    t.deepEqual(
+      comments,
+      [
+        {
+          type: 'comment',
+          raw: 'this is a console log',
+          test: 1
+        }
+      ],
+      'one comment'
+    );
+    t.end();
+  });
+  
+  p.on('comment', function (comment) {
+    
+    comments.push(comment);
   });
   
   mockTap.forEach(function (line) {

@@ -107,6 +107,19 @@ module.exports = function (done) {
         }
       }
       
+      // This is a plan failure
+      if (lastAssert.name === 'plan != count') {
+        lastAssert.type = 'plan';
+        delete lastAssert.error.at;
+        lastAssert.error.operator = 'count';
+        
+        // Need to set this value
+        if (m[0] === 'actual') {
+          lastAssert.error.actual = trim(m[1]);
+        }
+      }
+      
+      
       lastAssert.error[m[0]] = msg;
     }
   }

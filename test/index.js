@@ -285,30 +285,57 @@ test('fail', function (t) {
     "    expected: 'you'",
     "    actual:   'me'",
     "    at: Test.<anonymous> (/Users/scott/www/divshot/divshot-cli/test/index.js:8:5)",
-    "  ..."
+    "  ...",
+    "not ok 15 plan != count",
+    "  ---",
+    "    operator: fail",
+    "    expected: 4",
+    "    actual:   3",
+    "  ...",
+    "",
+    "1..15",
   ];
   
   var fails = [];
   var p = parser(function () {
     
-    t.deepEqual(fails[0], {
-      error: {
-        actual:'me',
-        expected:'you',
-        operator: 'equal',
-        at: {
-          charactor: '5',
-          file: '/Users/scott/www/divshot/divshot-cli/test/index.js',
-          line: '8'
+    t.deepEqual(
+      fails,
+      [
+        {
+          error: {
+            actual: 'me',
+            at: {
+              charactor: '5',
+              file: '/Users/scott/www/divshot/divshot-cli/test/index.js',
+              line: '8'
+            },
+            expected: 'you',
+            operator: 'equal'
+          },
+          name: 'strings match',
+          number: 3,
+          ok: false,
+          raw: 'not ok 3 strings match',
+          test: 1,
+          type: 'assert'
+        },
+        {
+          error: {
+            actual: '3',
+            expected: '4',
+            operator: 'count'
+          },
+          name: 'plan != count',
+          number: 15,
+          ok: false,
+          raw: 'not ok 15 plan != count',
+          test: 1,
+          type: 'plan'
         }
-      },
-      name: 'strings match',
-      number: 3,
-      ok: false,
-      raw: 'not ok 3 strings match',
-      test: 1,
-      type: 'assert'
-    }, 'fail');
+      ],
+      'fails'
+    );
   });
   
   p.on('fail', function (fail) {

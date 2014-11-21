@@ -1,11 +1,11 @@
-# tapper
+# tap-out
 
 A different tap parser
 
 ## Install
 
 ```
-npm install tapper --save
+npm install tap-out --save
 ```
 
 ## Usage
@@ -13,7 +13,7 @@ npm install tapper --save
 **CLI**
 
 ```
-$ something-that-produces-tap | tapper
+$ something-that-produces-tap | tap-out
 {
   asserts: [
     { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' }, 
@@ -35,9 +35,9 @@ $ something-that-produces-tap | tapper
 **API**
 
 ```js
-var tapper = require('tapper');
+var tapOut = require('tap-out');
 
-var t = tapper(function (output) {
+var t = tapOut(function (output) {
   
   console.log(output);
 });
@@ -47,7 +47,7 @@ process.stdin.pipe(t);
 
 ## Methods
 
-### var t = tapper(callback)
+### var t = tapOut(callback)
 
 Returns a stream that emits events with various TAP data.
 

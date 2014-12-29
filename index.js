@@ -27,7 +27,10 @@ function Parser() {
     fail: [],
   };
   this.testNumber = 0;
+
+
   this.writingErrorOutput = false;
+  this.writingErrorStackOutput = false;
   this.tmpErrorOutput = '';
 }
 
@@ -87,16 +90,33 @@ Parser.prototype._handleError = function _handleError(line) {
   // End of error output
   else if (isErrorOutputEnd(line)) {
     this.writingErrorOutput = false;
+    this.writingErrorStackOutput = false;
+
     // Emit error here so it has the full error message with it
     var lastAssert = this.results.fail[this.results.fail.length - 1];
+
+    if (this.tmpErrorOutput) {
+      lastAssert.error.stack = this.tmpErrorOutput;
+      this.tmpErrorOutput = '';
+    }
+
     this.emit('fail', lastAssert);
+  }
+  // Append to stack
+  else if (this.writingErrorStackOutput) {
+    this.tmpErrorOutput += trim(line) + '\n';
   }
   // No the beginning of the error message but it's the body
   else if (this.writingErrorOutput) {
     var lastAssert = this.results.fail[this.results.fail.length - 1];
-    var m = trim(line).split(': ');
+    var m = splitFirst(trim(line), (':'));
+
+    if (m[0] === 'stack') {
+      this.writingErrorStackOutput = true;
+      return;
+    }
     
-    var msg = trim(m[1].replace(/['"]+/g, ''));
+    var msg = trim((m[1] || '').replace(/['"]+/g, ''));
     
     if (m[0] === 'at') {
       msg = trim(m[1]
@@ -168,4 +188,13 @@ function isErrorOutputStart (line) {
 function isErrorOutputEnd (line) {
   
   return line.indexOf('  ...') === 0;
+}
+
+function splitFirst(str, pattern) {
+  var parts = str.split(pattern);
+  if (parts.length <= 1) {
+    return parts;
+  }
+
+  return [parts[0], parts.slice(1).join(pattern)];
 }

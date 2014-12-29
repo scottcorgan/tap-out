@@ -12,6 +12,7 @@
   "author": "Scott Corgan",
   "license": "MIT",
   "dependencies": {
+    "re-emitter": "^1.0.0",
     "split": "^0.3.1",
     "through2": "^0.6.3",
     "trim": "0.0.1"

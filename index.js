@@ -28,7 +28,7 @@ function Parser() {
   };
   this.testNumber = 0;
 
-
+  this.previousLine = '';
   this.writingErrorOutput = false;
   this.writingErrorStackOutput = false;
   this.tmpErrorOutput = '';
@@ -37,6 +37,7 @@ function Parser() {
 util.inherits(Parser, EventEmitter);
 
 Parser.prototype.handleLine = function handleLine(line) {
+  
   var parsed = parseLine(line);
 
   // This will handle all the error stuff
@@ -78,8 +79,18 @@ Parser.prototype.handleLine = function handleLine(line) {
     }
   }
   
-  this.emit(parsed.type, parsed);
-  this.results[parsed.type + 's'].push(parsed);
+  if (!isOkLine(this.previousLine)) {
+    this.emit(parsed.type, parsed);
+    this.results[parsed.type + 's'].push(parsed);
+  }
+  
+  // This is all so we can determine if the "# ok" output on the last line 
+  // should be skipped
+  function isOkLine (previousLine) {
+    
+    return line === '# ok' && previousLine.indexOf('# pass') > -1;
+  }
+  this.previousLine = line;
 };
 
 Parser.prototype._handleError = function _handleError(line) {

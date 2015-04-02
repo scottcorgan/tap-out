@@ -117,7 +117,7 @@ Parser.prototype._handleError = function _handleError(line) {
   else if (this.writingErrorStackOutput) {
     this.tmpErrorOutput += trim(line) + '\n';
   }
-  // No the beginning of the error message but it's the body
+  // Not the beginning of the error message but it's the body
   else if (this.writingErrorOutput) {
     var lastAssert = this.results.fail[this.results.fail.length - 1];
     var m = splitFirst(trim(line), (':'));
@@ -130,17 +130,19 @@ Parser.prototype._handleError = function _handleError(line) {
     var msg = trim((m[1] || '').replace(/['"]+/g, ''));
     
     if (m[0] === 'at') {
-      msg = trim(m[1]
-        .replace(/['"]+/g, '')
-        .replace('Test.<anonymous> (', ''))
-        .replace(')', '');
+      // Example string: Object.async.eachSeries (/Users/scott/www/modules/nash/node_modules/async/lib/async.js:145:20)
+      
+      msg = msg
+      .split(' ')[1]
+      .replace('(', '')
+      .replace(')', '');
       
       var values = msg.split(':');
       
       msg = {
         file: values[0],
         line: values[1],
-        charactor: values[2]
+        character: values[2]
       };
     }
     

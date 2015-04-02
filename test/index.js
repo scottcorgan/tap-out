@@ -272,7 +272,7 @@ test('pass', function (t) {
   p.end();
 });
 
-test('fail', function (t) {
+test('failed assertion', function (t) {
   
   t.plan(1);
   
@@ -308,7 +308,7 @@ test('fail', function (t) {
           error: {
             actual: 'me',
             at: {
-              charactor: '5',
+              character: '5',
               file: '/Users/scott/www/divshot/divshot-cli/test/index.js',
               line: '8'
             },

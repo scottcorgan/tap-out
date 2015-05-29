@@ -37,12 +37,12 @@ function Parser() {
 util.inherits(Parser, EventEmitter);
 
 Parser.prototype.handleLine = function handleLine(line) {
-  
+
   var parsed = parseLine(line);
 
   // This will handle all the error stuff
   this._handleError(line);
-  
+
   // THis is weird, but it's the only way to distinguish a
   // console.log type output from an error output
   if (!this.writingErrorOutput && !parsed && !isErrorOutputEnd(line)) {
@@ -54,23 +54,23 @@ Parser.prototype.handleLine = function handleLine(line) {
     this.emit('comment', comment);
     this.results.comments.push(comment);
   }
-  
+
   // Invalid line
   if (!parsed) {
     return;
   }
-  
+
   // Handle tests
   if (parsed.type === 'test') {
     this.testNumber += 1;
     parsed.number = this.testNumber;
   }
-  
+
   // Handle asserts
   if (parsed.type === 'assert') {
     parsed.test = this.testNumber;
     this.results[parsed.ok ? 'pass' : 'fail'].push(parsed);
-    
+
     if (parsed.ok) {
       // No need to have the error object
       // in a passing assertion
@@ -78,25 +78,27 @@ Parser.prototype.handleLine = function handleLine(line) {
       this.emit('pass', parsed);
     }
   }
-  
+
   if (!isOkLine(this.previousLine)) {
     this.emit(parsed.type, parsed);
     this.results[parsed.type + 's'].push(parsed);
   }
-  
-  // This is all so we can determine if the "# ok" output on the last line 
+
+  // This is all so we can determine if the "# ok" output on the last line
   // should be skipped
   function isOkLine (previousLine) {
-    
+
     return line === '# ok' && previousLine.indexOf('# pass') > -1;
   }
   this.previousLine = line;
 };
 
 Parser.prototype._handleError = function _handleError(line) {
+
   // Start of error output
   if (isErrorOutputStart(line)) {
     this.writingErrorOutput = true;
+    this.lastAsserRawErrorArray = {};
   }
   // End of error output
   else if (isErrorOutputEnd(line)) {
@@ -111,6 +113,8 @@ Parser.prototype._handleError = function _handleError(line) {
       this.tmpErrorOutput = '';
     }
 
+    lastAssert.error.raw = this.lastAsserRawErrorArray;
+
     this.emit('fail', lastAssert);
   }
   // Append to stack
@@ -122,64 +126,68 @@ Parser.prototype._handleError = function _handleError(line) {
     var lastAssert = this.results.fail[this.results.fail.length - 1];
     var m = splitFirst(trim(line), (':'));
 
+    // Rebuild raw error output
+    this.lastAsserRawErrorArray[m[0]] = m[1];
+
     if (m[0] === 'stack') {
       this.writingErrorStackOutput = true;
       return;
     }
-    
+
     var msg = trim((m[1] || '').replace(/['"]+/g, ''));
-    
+
     if (m[0] === 'at') {
       // Example string: Object.async.eachSeries (/Users/scott/www/modules/nash/node_modules/async/lib/async.js:145:20)
-      
+
       msg = msg
       .split(' ')[1]
       .replace('(', '')
       .replace(')', '');
-      
+
       var values = msg.split(':');
-      
+
+
       msg = {
         file: values[0],
         line: values[1],
         character: values[2]
       };
     }
-    
+
     // This is a plan failure
     if (lastAssert.name === 'plan != count') {
       lastAssert.type = 'plan';
       delete lastAssert.error.at;
       lastAssert.error.operator = 'count';
-      
+
       // Need to set this value
       if (m[0] === 'actual') {
         lastAssert.error.actual = trim(m[1]);
       }
     }
-    
+
     lastAssert.error[m[0]] = msg;
   }
 };
 
 module.exports = function (done) {
-  
+
   done = done || function () {};
-  
+
   var stream = through();
   var parser = Parser();
   reemit(parser, stream, [
     'test', 'assert', 'version', 'result', 'pass', 'fail', 'comment'
   ]);
-  
+
   stream
     .pipe(split())
     .on('data', function (data) {
-      
+
       if (!data) {
         return;
       }
-      
+
       var line = data.toString();
       parser.handleLine(line);
     })
@@ -188,22 +196,24 @@ module.exports = function (done) {
       done(null, parser.results);
     })
     .on('error', done);
-  
+
   return stream;
 };
+
 module.exports.Parser = Parser;
 
 function isErrorOutputStart (line) {
-  
+
   return line.indexOf('  ---') === 0;
 }
 
 function isErrorOutputEnd (line) {
-  
+
   return line.indexOf('  ...') === 0;
 }
 
 function splitFirst(str, pattern) {
+
   var parts = str.split(pattern);
   if (parts.length <= 1) {
     return parts;

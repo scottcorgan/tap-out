@@ -2,26 +2,26 @@ var parser = require('../');
 var test = require('tape');
 
 test('output event', function (t) {
-  
+
   t.plan(1);
-  
+
   var mockTap = [
     '# is true',
     'ok 1 true value',
     'ok 2 true value'
   ];
-  
+
   var p = parser();
-  
+
   p.on('output', function (output) {
-    
+
     t.deepEqual(output, {
       asserts: [
-        { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' }, 
+        { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' },
         { name: 'true value', number: 2, ok: true, raw: 'ok 2 true value', test: 1, type: 'assert' }
       ],
       fail: [],
-      pass: [ 
+      pass: [
         { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' },
         { name: 'true value', number: 2, ok: true, raw: 'ok 2 true value', test: 1, type: 'assert' }
       ],
@@ -33,33 +33,33 @@ test('output event', function (t) {
       comments: []
     }, 'output data');
   });
-  
+
   mockTap.forEach(function (line) {
-    
+
     p.write(line + '\n');
   });
   p.end();
 });
 
 test('output callback', function (t) {
-  
+
   t.plan(1);
-  
+
   var mockTap = [
     '# is true',
     'ok 1 true value',
     'ok 2 true value'
   ];
-  
+
   var p = parser(function (err, output) {
-    
+
     t.deepEqual(output, {
       asserts: [
-        { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' }, 
+        { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' },
         { name: 'true value', number: 2, ok: true, raw: 'ok 2 true value', test: 1, type: 'assert' }
       ],
       fail: [],
-      pass: [ 
+      pass: [
         { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' },
         { name: 'true value', number: 2, ok: true, raw: 'ok 2 true value', test: 1, type: 'assert' }
       ],
@@ -71,28 +71,28 @@ test('output callback', function (t) {
       comments: []
     }, 'output data');
   });
-  
+
   mockTap.forEach(function (line) {
-    
+
     p.write(line + '\n');
   });
   p.end();
 });
 
 test('tests', function (t) {
-  
+
   t.plan(1);
-  
+
   var mockTap = [
     '# is true',
     'ok 1 true value',
     'ok 2 true value'
   ];
-  
+
   var p = parser();
-  
+
   p.on('test', function (test) {
-    
+
     t.deepEqual(test, {
       type: 'test',
       name: 'is true',
@@ -100,33 +100,33 @@ test('tests', function (t) {
       number: 1
     }, 'test is parsed');
   });
-  
+
   mockTap.forEach(function (line) {
-    
+
     p.write(line + '\n');
   });
   p.end();
 });
 
 test('asserts', function (t) {
-  
+
   t.plan(2);
-  
+
   var mockTap = [
     '# is true',
     'ok 1 true value',
     'ok 2 true value'
   ];
-  
+
   var p = parser();
-  
+
   var asserts = [];
   p.on('assert', function (assert) {
     asserts.push(assert);
   });
-  
+
   p.on('output', function () {
-    
+
     t.deepEqual(asserts[0], {
       name: 'true value',
       number: 1,
@@ -144,47 +144,47 @@ test('asserts', function (t) {
       type: 'assert'
     }, 'assert 2')
   });
-  
+
   mockTap.forEach(function (line) {
-    
+
     p.write(line + '\n');
   });
   p.end();
 });
 
 test('results', function (t) {
-  
+
   t.plan(3);
-  
+
   var mockTap = [
     '# tests 15',
     '# pass  13',
     '# fail  2'
   ];
-  
+
   var p = parser();
-  
+
   var results = [];
   p.on('result', function (result) {
     results.push(result);
   });
-  
+
   p.on('output', function () {
-    
+
     t.deepEqual(results[0], {
       count: '15',
       name: 'tests',
       raw: '# tests 15',
-      type: 'result' 
+      type: 'result'
     }, 'tests');
-    
+
     t.deepEqual(results[1], {
       count: '13',
       name: 'pass',
       raw: '# pass  13',
       type: 'result'
     }, 'pass');
-    
+
     t.deepEqual(results[2], {
       count: '2',
       name: 'fail',
@@ -192,60 +192,60 @@ test('results', function (t) {
       type: 'result'
     }, 'fail');
   });
-  
+
   mockTap.forEach(function (line) {
-    
+
     p.write(line + '\n');
   });
   p.end();
 });
 
 test('version', function (t) {
-  
+
   t.plan(1);
-  
+
   var mockTap = [
     'TAP version 13'
   ];
-  
+
   var p = parser();
-  
+
   var results = [];
   p.on('version', function (version) {
-    
+
     t.deepEqual(version, {
       raw: 'TAP version 13',
       type: 'version'
     }, 'version data');
   });
-  
+
   mockTap.forEach(function (line) {
-    
+
     p.write(line + '\n');
   });
   p.end();
 });
 
 test('pass', function (t) {
-  
+
   t.plan(2);
-  
+
   var mockTap = [
     '# is true',
     'ok 1 true value',
     'ok 2 true value'
   ];
-  
+
   var p = parser();
-  
+
   var passes = [];
   p.on('pass', function (pass) {
-    
+
     passes.push(pass);
   });
-  
+
   p.on('output', function () {
-    
+
     t.deepEqual(passes[0], {
       name: 'true value',
       number: 1,
@@ -254,7 +254,7 @@ test('pass', function (t) {
       test: 1,
       type: 'assert'
     }, 'pass 1');
-    
+
     t.deepEqual(passes[1], {
       name: 'true value',
       number: 2,
@@ -264,18 +264,18 @@ test('pass', function (t) {
       type: 'assert'
     }, 'pass 2');
   });
-  
+
   mockTap.forEach(function (line) {
-    
+
     p.write(line + '\n');
   });
   p.end();
 });
 
 test('failed assertion', function (t) {
-  
+
   t.plan(1);
-  
+
   var mockTap = [
     "TAP version 13",
     "# is true",
@@ -297,10 +297,10 @@ test('failed assertion', function (t) {
     "",
     "1..15",
   ];
-  
+
   var fails = [];
   var p = parser(function () {
-    
+
     t.deepEqual(
       fails,
       [
@@ -313,7 +313,13 @@ test('failed assertion', function (t) {
               line: '8'
             },
             expected: 'you',
-            operator: 'equal'
+            operator: 'equal',
+            raw:{
+                actual:'   \'me\'',
+                at:' Test.<anonymous> (/Users/scott/www/divshot/divshot-cli/test/index.js:8:5)',
+                expected:' \'you\'',
+                operator:' equal'
+             }
           },
           name: 'strings match',
           number: 3,
@@ -326,7 +332,12 @@ test('failed assertion', function (t) {
           error: {
             actual: '3',
             expected: '4',
-            operator: 'count'
+            operator: 'count',
+            raw:{
+                actual:'   3',
+                expected:' 4',
+                operator:' fail'
+             }
           },
           name: 'plan != count',
           number: 15,
@@ -339,14 +350,14 @@ test('failed assertion', function (t) {
       'fails'
     );
   });
-  
+
   p.on('fail', function (fail) {
-    
+
     fails.push(fail);
   });
-  
+
   mockTap.forEach(function (line) {
-    
+
     p.write(line + '\n');
   });
   p.end();
@@ -359,7 +370,7 @@ test('failed assertion', function (t) {
 test('comments');
 
 test('generic output', function (t) {
-  
+
   var mockTap = [
     "TAP version 13",
     "# is true",
@@ -377,10 +388,10 @@ test('generic output', function (t) {
     "ok 4 should be false",
     "ok 5 false value"
   ];
-  
+
   var comments = [];
   var p = parser(function (err, output) {
-    
+
     t.deepEqual(
       comments,
       [
@@ -394,14 +405,14 @@ test('generic output', function (t) {
     );
     t.end();
   });
-  
+
   p.on('comment', function (comment) {
-    
+
     comments.push(comment);
   });
-  
+
   mockTap.forEach(function (line) {
-    
+
     p.write(line + '\n');
   });
   p.end();

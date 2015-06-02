@@ -417,3 +417,43 @@ test('generic output', function (t) {
   });
   p.end();
 });
+
+test('handles HTTP error source', function (t) {
+
+  t.plan(1);
+
+  var mockTap = [
+    "TAP version 13",
+    "# is true",
+    "ok 1 true value",
+    "ok 2 true value",
+    "not ok 3 strings match",
+    "  ---",
+    "    operator: equal",
+    "    expected: 'you'",
+    "    actual:   'me'",
+    "    at: Test.<anonymous> (http://localhost:9966/index.js:8:5)",
+    "  ...",
+    "not ok 15 plan != count",
+    "  ---",
+    "    operator: fail",
+    "    expected: 4",
+    "    actual:   3",
+    "  ...",
+    "",
+    "1..15",
+  ];
+
+  var p = parser();
+
+  p.on('output', function (output) {
+    var assert = output.fail[0];
+    t.deepEqual(assert.error.at, { character: '5', file: 'http://localhost:9966/index.js', line: '8' });
+  });
+
+  mockTap.forEach(function (line) {
+
+    p.write(line + '\n');
+  });
+  p.end();
+});

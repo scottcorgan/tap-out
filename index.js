@@ -145,12 +145,12 @@ Parser.prototype._handleError = function _handleError(line) {
       .replace(')', '');
 
       var values = msg.split(':');
-
+      var file = values.slice(0, values.length-2).join(':');
 
       msg = {
-        file: values[0],
-        line: values[1],
-        character: values[2]
+        file: file,
+        line: values[values.length-2],
+        character: values[values.length-1]
       };
     }
 

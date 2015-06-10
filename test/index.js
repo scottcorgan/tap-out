@@ -314,12 +314,12 @@ test('failed assertion', function (t) {
             },
             expected: 'you',
             operator: 'equal',
-            raw:{
-                actual:'   \'me\'',
-                at:' Test.<anonymous> (/Users/scott/www/divshot/divshot-cli/test/index.js:8:5)',
-                expected:' \'you\'',
-                operator:' equal'
-             }
+            raw: [
+              "    operator: equal",
+              "    expected: 'you'",
+              "    actual:   'me'",
+              "    at: Test.<anonymous> (/Users/scott/www/divshot/divshot-cli/test/index.js:8:5)"
+            ].join('\n')
           },
           name: 'strings match',
           number: 3,
@@ -333,11 +333,11 @@ test('failed assertion', function (t) {
             actual: '3',
             expected: '4',
             operator: 'count',
-            raw:{
-                actual:'   3',
-                expected:' 4',
-                operator:' fail'
-             }
+            raw: [
+              "    operator: fail",
+              "    expected: 4",
+              "    actual:   3"
+            ].join('\n')
           },
           name: 'plan != count',
           number: 15,
@@ -457,3 +457,50 @@ test('handles HTTP error source', function (t) {
   });
   p.end();
 });
+
+test('handles raw error string', function (t) {
+
+  t.plan(1);
+
+  var rawLines = [
+    "    operator: deepEqual",
+    "    expected:",
+    "      { 0: 0, 1: 0, 10: 0, 11: 255, 12: 0, 13: 0, 14: 0, 15: 255, 2: 0, 3: 221, 4: 0, 5: 0, 6: 0, 7: 255, 8: 0, 9: 0 }",
+    "    actual:",
+    "      { 0: 0, 1: 0, 10: 0, 11: 255, 12: 0, 13: 0, 14: 0, 15: 255, 2: 0, 3: 255, 4: 0, 5: 0, 6: 0, 7: 255, 8: 0, 9: 0 }",
+    "    at: Test.<anonymous> (http://localhost:9966/index.js:8:5)"
+  ];
+
+  var mockTap = [
+    "TAP version 13",
+    "# is true",
+    "ok 1 true value",
+    "ok 2 true value",
+    "not ok 3 arrays match",
+    "  ---"
+  ].concat(rawLines).concat([
+    "  ...",
+    "not ok 15 plan != count",
+    "  ---",
+    "    operator: fail",
+    "    expected: 4",
+    "    actual:   3",
+    "  ...",
+    "",
+    "1..15",
+  ]);
+
+  var p = parser();
+
+  p.on('output', function (output) {
+    var assert = output.fail[0];
+    t.deepEqual(assert.error.raw, rawLines.join('\n'));
+  });
+
+  mockTap.forEach(function (line) {
+
+    p.write(line + '\n');
+  });
+  p.end();
+});
+

@@ -98,7 +98,7 @@ Parser.prototype._handleError = function _handleError(line) {
   // Start of error output
   if (isErrorOutputStart(line)) {
     this.writingErrorOutput = true;
-    this.lastAsserRawErrorArray = {};
+    this.lastAsserRawErrorString = '';
   }
   // End of error output
   else if (isErrorOutputEnd(line)) {
@@ -113,7 +113,8 @@ Parser.prototype._handleError = function _handleError(line) {
       this.tmpErrorOutput = '';
     }
 
-    lastAssert.error.raw = this.lastAsserRawErrorArray;
+    // right-trimmed raw error string
+    lastAssert.error.raw = this.lastAsserRawErrorString.replace(/\s+$/g, '');
 
     this.emit('fail', lastAssert);
   }
@@ -127,7 +128,7 @@ Parser.prototype._handleError = function _handleError(line) {
     var m = splitFirst(trim(line), (':'));
 
     // Rebuild raw error output
-    this.lastAsserRawErrorArray[m[0]] = m[1];
+    this.lastAsserRawErrorString += line + '\n';
 
     if (m[0] === 'stack') {
       this.writingErrorStackOutput = true;

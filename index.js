@@ -1,6 +1,6 @@
 'use strict';
 
-var through = require('through2');
+var PassThrough = require('readable-stream/passthrough');
 var split = require('split');
 var trim = require('trim');
 var util = require('util');
@@ -175,7 +175,7 @@ module.exports = function (done) {
 
   done = done || function () {};
 
-  var stream = through();
+  var stream = new PassThrough();
   var parser = Parser();
   reemit(parser, stream, [
     'test', 'assert', 'version', 'result', 'pass', 'fail', 'comment'

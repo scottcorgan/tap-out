@@ -43,17 +43,23 @@ Parser.prototype.handleLine = function handleLine(line) {
   // This will handle all the error stuff
   this._handleError(line);
 
-  // THis is weird, but it's the only way to distinguish a
+  // This is weird, but it's the only way to distinguish a
   // console.log type output from an error output
-  if (!this.writingErrorOutput && !parsed && !isErrorOutputEnd(line)) {
-    var comment = {
-      type: 'comment',
-      raw: line,
-      test: this.testNumber
-    };
-    this.emit('comment', comment);
-    this.results.comments.push(comment);
-  }
+  if (
+    !this.writingErrorOutput
+    && !parsed
+    && !isErrorOutputEnd(line)
+    && !isRawTapTestStatus(line)
+    )
+      {
+          var comment = {
+            type: 'comment',
+            raw: line,
+            test: this.testNumber
+          };
+          this.emit('comment', comment);
+          this.results.comments.push(comment);
+      }
 
   // Invalid line
   if (!parsed) {
@@ -221,4 +227,10 @@ function splitFirst(str, pattern) {
   }
 
   return [parts[0], parts.slice(1).join(pattern)];
+}
+
+function isRawTapTestStatus (str) {
+
+  var rawTapTestStatusRegex = new RegExp('(\\d+)(\\.)(\\.)(\\d+)');;
+  return rawTapTestStatusRegex.exec(str);
 }

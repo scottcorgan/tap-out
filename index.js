@@ -23,6 +23,7 @@ function Parser() {
     versions: [],
     results: [],
     comments: [],
+    plans: [],
     pass: [],
     fail: [],
   };
@@ -184,7 +185,7 @@ module.exports = function (done) {
   var stream = new PassThrough();
   var parser = Parser();
   reemit(parser, stream, [
-    'test', 'assert', 'version', 'result', 'pass', 'fail', 'comment'
+    'test', 'assert', 'version', 'result', 'pass', 'fail', 'comment', 'plan'
   ]);
 
   stream

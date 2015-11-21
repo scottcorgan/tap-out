@@ -1,10 +1,10 @@
 {
   "name": "tap-out",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "A different tap parser",
   "main": "index.js",
   "scripts": {
-    "test": "tape test/index.js | tap-spec"
+    "test": "tape test/index.js"
   },
   "bin": {
     "tap-out": "bin/cmd.js"
@@ -15,7 +15,6 @@
     "re-emitter": "^1.0.0",
     "readable-stream": "^2.0.0",
     "split": "^1.0.0",
-    "tap-spec": "^4.1.0",
     "trim": "0.0.1"
   },
   "devDependencies": {

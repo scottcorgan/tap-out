@@ -8,7 +8,8 @@ test('output event', function (t) {
   var mockTap = [
     '# is true',
     'ok 1 true value',
-    'ok 2 true value'
+    'ok 2 true value',
+    '1..2'
   ];
 
   var p = parser();
@@ -30,7 +31,8 @@ test('output event', function (t) {
         { name: 'is true', number: 1, raw: '# is true', type: 'test' }
       ],
       versions: [],
-      comments: []
+      comments: [],
+      plans: [{ from: 1, to: 2, raw: '1..2', skip: undefined, type: 'plan' }]
     }, 'output data');
   });
 
@@ -48,7 +50,8 @@ test('output callback', function (t) {
   var mockTap = [
     '# is true',
     'ok 1 true value',
-    'ok 2 true value'
+    'ok 2 true value',
+    '1..2'
   ];
 
   var p = parser(function (err, output) {
@@ -68,7 +71,8 @@ test('output callback', function (t) {
         { name: 'is true', number: 1, raw: '# is true', type: 'test' }
       ],
       versions: [],
-      comments: []
+      comments: [],
+      plans: [{ from: 1, to: 2, raw: '1..2', skip: undefined, type: 'plan' }]
     }, 'output data');
   });
 
@@ -354,6 +358,31 @@ test('failed assertion', function (t) {
   p.on('fail', function (fail) {
 
     fails.push(fail);
+  });
+
+  mockTap.forEach(function (line) {
+
+    p.write(line + '\n');
+  });
+  p.end();
+});
+
+test('plan', function (t) {
+
+  var mockTap = [
+    '1..2',
+  ];
+
+  var plans = [];
+  var p = parser(function () {
+    t.deepEqual(plans, [
+      { from: 1, to: 2, raw: '1..2', skip: undefined, type: 'plan' }
+    ]);
+    t.end();
+  });
+
+  p.on('plan', function (plan) {
+    plans.push(plan);
   });
 
   mockTap.forEach(function (line) {

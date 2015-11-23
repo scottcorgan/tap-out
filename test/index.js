@@ -533,3 +533,22 @@ test('handles raw error string', function (t) {
   p.end();
 });
 
+test('yaml output', function (t) {
+
+  var mockTap = [
+    'ok 1 - a test',
+    '  ---',
+    '  a: b',
+    '  ...'
+  ];
+
+  var p = parser();
+
+  mockTap.forEach(function (line) {
+
+    p.write(line + '\n');
+  });
+  p.end();
+
+  t.end()
+})

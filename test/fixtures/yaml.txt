@@ -1,0 +1,18 @@
+TAP version 13
+# is true
+ok 1 - a test,
+  ---,
+  a: b,
+  ...
+ok 2 true value
+not ok 3 strings match
+  ---
+    operator: equal
+    expected: 'you'
+    actual:   'me'
+    at: Test.<anonymous> (/Users/scott/www/divshot/divshot-cli/test/index.js:8:5)
+  ...
+ok 4 true value
+ok 5 true value
+ok 6 true value
+

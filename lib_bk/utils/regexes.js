@@ -4,5 +4,5 @@ module.exports = {
   plan: /^(\d+)\.\.(\d+)\b(?:\s+#\s+SKIP\s+(.*)$)?/,
   comment: /^#\s*(.+)/,
   version: /^TAP\s+version\s+(\d+)/i,
-  label_todo: /^(.*?)\s*#\s*TODO\s+(.*)$/
+  todo: /^(.*?)\s*#\s*TODO\s+(.*)$/
 };

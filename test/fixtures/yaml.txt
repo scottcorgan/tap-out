@@ -1,10 +1,11 @@
 TAP version 13
-# is true
+# test 1
 ok 1 - a test,
   ---,
-  a: b,
+    a: b,
   ...
 ok 2 true value
+this is a console log
 not ok 3 strings match
   ---
     operator: equal
@@ -14,5 +15,17 @@ not ok 3 strings match
   ...
 ok 4 true value
 ok 5 true value
+# test 2
 ok 6 true value
+# test 3
+not ok 7 plan != count
+  ---
+    operator: fail
+    expected: 4
+    actual:   3
+  ...
 
+1..7
+# tests 6
+# pass  4
+# fail  2

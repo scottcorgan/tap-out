@@ -1,237 +1,136 @@
-'use strict';
+'use strict'
 
-var PassThrough = require('readable-stream/passthrough');
-var split = require('split');
-var trim = require('trim');
-var util = require('util');
-var EventEmitter = require('events').EventEmitter;
-var reemit = require('re-emitter');
+var Rx = require('rx')
+var RxNode = require('rx-node')
+var PassThrough = require('readable-stream/passthrough')
+var split = require('split')
 
-var expr = require('./lib/utils/regexes');
-var parseLine = require('./lib/parse-line');
+var O = Rx.Observable
+var Subject = Rx.Subject
 
-function Parser() {
-  if (!(this instanceof Parser)) {
-    return new Parser();
-  }
-
-  EventEmitter.call(this);
-
-  this.results = {
-    tests: [],
-    asserts: [],
-    versions: [],
-    results: [],
-    comments: [],
-    plans: [],
-    pass: [],
-    fail: [],
-  };
-  this.testNumber = 0;
-
-  this.previousLine = '';
-  this.writingErrorOutput = false;
-  this.writingErrorStackOutput = false;
-  this.tmpErrorOutput = '';
+var REGEXES = {
+  assertion: new RegExp('^(not )?ok\\b(?:(?:\\s+(\\d+))?(?:\\s+(?:(?:\\s*-\\s*)?(.*)))?)?'),
+  result: new RegExp('(#)(\\s+)((?:[a-z][a-z]+))(\\s+)(\\d+)',['i']),
+  plan: /^(\d+)\.\.(\d+)\b(?:\s+#\s+SKIP\s+(.*)$)?/,
+  comment: /^#\s*(.+)/,
+  version: /^TAP\s+version\s+(\d+)/i,
+  todo: /^(.*?)\s*#\s*TODO\s+(.*)$/
 }
 
-util.inherits(Parser, EventEmitter);
+function getAssertions (tap$) {
 
-Parser.prototype.handleLine = function handleLine(line) {
+  var assertionBuffer = []
+  var parsingCommentBlock = false
+  var shouldOneNext = false
+  var assertions$ = new Subject()
 
-  var parsed = parseLine(line);
+  function isCommentBlockStart (line) {
 
-  // This will handle all the error stuff
-  this._handleError(line);
+    return line.indexOf('  ---') === 0
+  }
 
-  // This is weird, but it's the only way to distinguish a
-  // console.log type output from an error output
-  if (
-    !this.writingErrorOutput
-    && !parsed
-    && !isErrorOutputEnd(line)
-    && !isRawTapTestStatus(line)
+  function isCommentBlockEnd (line) {
+
+    return line.indexOf('  ...') === 0
+  }
+
+  function isAssertion (line) {
+
+    return REGEXES.assertion.test(line)
+  }
+
+  tap$
+    .forEach(
+      function (line) {
+
+        if (isCommentBlockEnd(line)) {
+          parsingCommentBlock = false
+          assertionBuffer.push(line)
+          shouldOneNext = true
+          return
+        }
+
+        if (parsingCommentBlock) {
+          assertionBuffer.push(line)
+          return
+        }
+
+        if (isAssertion(line) || shouldOneNext) {
+          if (assertionBuffer.length > 0) {
+            assertions$.onNext(assertionBuffer)
+            shouldOneNext = false
+            assertionBuffer = []
+          }
+
+          assertionBuffer.push(line)
+          return
+        }
+
+        if (isCommentBlockStart(line)) {
+          parsingCommentBlock = true
+          assertionBuffer.push(line)
+        }
+      },
+      assertions$.onError,
+      assertions$.onCompleted
     )
-      {
-          var comment = {
-            type: 'comment',
-            raw: line,
-            test: this.testNumber
-          };
-          this.emit('comment', comment);
-          this.results.comments.push(comment);
-      }
 
-  // Invalid line
-  if (!parsed) {
-    return;
-  }
+  return assertions$
+}
 
-  // Handle tests
-  if (parsed.type === 'test') {
-    this.testNumber += 1;
-    parsed.number = this.testNumber;
-  }
+function getTests (tap$) {
 
-  // Handle asserts
-  if (parsed.type === 'assert') {
-    parsed.test = this.testNumber;
-    this.results[parsed.ok ? 'pass' : 'fail'].push(parsed);
+  return tap$
+    .filter(function (line) {
 
-    if (parsed.ok) {
-      // No need to have the error object
-      // in a passing assertion
-      delete parsed.error;
-      this.emit('pass', parsed);
-    }
-  }
-
-  if (!isOkLine(this.previousLine)) {
-    this.emit(parsed.type, parsed);
-    this.results[parsed.type + 's'].push(parsed);
-  }
-
-  // This is all so we can determine if the "# ok" output on the last line
-  // should be skipped
-  function isOkLine (previousLine) {
-
-    return line === '# ok' && previousLine.indexOf('# pass') > -1;
-  }
-  this.previousLine = line;
-};
-
-Parser.prototype._handleError = function _handleError(line) {
-
-  // Start of error output
-  if (isErrorOutputStart(line)) {
-    this.writingErrorOutput = true;
-    this.lastAsserRawErrorString = '';
-  }
-  // End of error output
-  else if (isErrorOutputEnd(line)) {
-    this.writingErrorOutput = false;
-    this.writingErrorStackOutput = false;
-
-    // Emit error here so it has the full error message with it
-    var lastAssert = this.results.fail[this.results.fail.length - 1];
-
-    if (this.tmpErrorOutput) {
-      lastAssert.error.stack = this.tmpErrorOutput;
-      this.tmpErrorOutput = '';
-    }
-
-    // right-trimmed raw error string
-    lastAssert.error.raw = this.lastAsserRawErrorString.replace(/\s+$/g, '');
-
-    this.emit('fail', lastAssert);
-  }
-  // Append to stack
-  else if (this.writingErrorStackOutput) {
-    this.tmpErrorOutput += trim(line) + '\n';
-  }
-  // Not the beginning of the error message but it's the body
-  else if (this.writingErrorOutput) {
-    var lastAssert = this.results.fail[this.results.fail.length - 1];
-    var m = splitFirst(trim(line), (':'));
-
-    // Rebuild raw error output
-    this.lastAsserRawErrorString += line + '\n';
-
-    if (m[0] === 'stack') {
-      this.writingErrorStackOutput = true;
-      return;
-    }
-
-    var msg = trim((m[1] || '').replace(/['"]+/g, ''));
-
-    if (m[0] === 'at') {
-      // Example string: Object.async.eachSeries (/Users/scott/www/modules/nash/node_modules/async/lib/async.js:145:20)
-
-      msg = msg
-      .split(' ')[1]
-      .replace('(', '')
-      .replace(')', '');
-
-      var values = msg.split(':');
-      var file = values.slice(0, values.length-2).join(':');
-
-      msg = {
-        file: file,
-        line: values[values.length-2],
-        character: values[values.length-1]
-      };
-    }
-
-    // This is a plan failure
-    if (lastAssert.name === 'plan != count') {
-      lastAssert.type = 'plan';
-      delete lastAssert.error.at;
-      lastAssert.error.operator = 'count';
-
-      // Need to set this value
-      if (m[0] === 'actual') {
-        lastAssert.error.actual = trim(m[1]);
-      }
-    }
-
-    lastAssert.error[m[0]] = msg;
-  }
-};
-
-module.exports = function (done) {
-
-  done = done || function () {};
-
-  var stream = new PassThrough();
-  var parser = Parser();
-  reemit(parser, stream, [
-    'test', 'assert', 'version', 'result', 'pass', 'fail', 'comment', 'plan'
-  ]);
-
-  stream
-    .pipe(split())
-    .on('data', function (data) {
-
-      if (!data) {
-        return;
-      }
-
-      var line = data.toString();
-      parser.handleLine(line);
+      return REGEXES.comment.test(line)
+        && line.indexOf('# tests') < 0
+        && line.indexOf('# pass') < 0
+        && line.indexOf('# fail') < 0
     })
-    .on('close', function () {
-      stream.emit('output', parser.results);
-      done(null, parser.results);
+}
+
+function getPlans (tap$) {
+
+  return tap$.filter(function (line) {
+
+    return REGEXES.plan.test(line)
+  })
+}
+
+function getVerions (tap$) {
+
+  return tap$.filter(function (line) {
+
+    return REGEXES.version.test(line)
+  })
+}
+
+module.exports = function run () {
+
+  var stream = new PassThrough()
+  var tap$ = RxNode.fromStream(stream.pipe(split()))
+
+  var plans$ = getPlans(tap$)
+  var versions$ = getVerions(tap$)
+  var tests$ = getTests(tap$)
+  var assertions$ = getAssertions(tap$)
+  var passingAssertions$ = assertions$
+    .filter(function (assertion) {
+
+      return !REGEXES.assertion.exec(assertion[0])[1]
     })
-    .on('error', done);
+  var failingAssertions$ = assertions$
+    .filter(function (assertion) {
 
-  return stream;
-};
+      return REGEXES.assertion.exec(assertion[0])[1]
+    })
 
-module.exports.Parser = Parser;
 
-function isErrorOutputStart (line) {
 
-  return line.indexOf('  ---') === 0;
-}
 
-function isErrorOutputEnd (line) {
+  // tap$
+  //   .forEach(console.log.bind(console))
 
-  return line.indexOf('  ...') === 0;
-}
-
-function splitFirst(str, pattern) {
-
-  var parts = str.split(pattern);
-  if (parts.length <= 1) {
-    return parts;
-  }
-
-  return [parts[0], parts.slice(1).join(pattern)];
-}
-
-function isRawTapTestStatus (str) {
-
-  var rawTapTestStatusRegex = new RegExp('(\\d+)(\\.)(\\.)(\\d+)');;
-  return rawTapTestStatusRegex.exec(str);
+  return stream
 }

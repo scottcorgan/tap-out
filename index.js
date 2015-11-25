@@ -17,36 +17,34 @@ var REGEXES = {
   todo: /^(.*?)\s*#\s*TODO\s+(.*)$/
 }
 
-function getAssertions (tap$) {
+function getTestsWithAssertions (tap$) {
 
+  var tests$ = new Subject()
+  tests$.assertions$ = new Subject()
+  var currentTest
   var assertionBuffer = []
+  var currentTestNum = 0
   var parsingCommentBlock = false
-  var shouldOneNext = false
-  var assertions$ = new Subject()
-
-  function isCommentBlockStart (line) {
-
-    return line.indexOf('  ---') === 0
-  }
-
-  function isCommentBlockEnd (line) {
-
-    return line.indexOf('  ...') === 0
-  }
-
-  function isAssertion (line) {
-
-    return REGEXES.assertion.test(line)
-  }
+  var shouldOnNext = false
 
   tap$
     .forEach(
       function (line) {
 
+        if (isTest(line)) {
+          if (currentTest) {
+            currentTest.assertions$.onCompleted()
+          }
+          currentTestNum += 1
+          currentTest = formatTestObject(line, currentTestNum)
+          tests$.onNext(currentTest)
+          return
+        }
+
         if (isCommentBlockEnd(line)) {
           parsingCommentBlock = false
           assertionBuffer.push(line)
-          shouldOneNext = true
+          shouldOnNext = true
           return
         }
 
@@ -55,10 +53,14 @@ function getAssertions (tap$) {
           return
         }
 
-        if (isAssertion(line) || shouldOneNext) {
+        if (isAssertion(line) || shouldOnNext) {
+
+          // Probably in a assertion meta block
           if (assertionBuffer.length > 0) {
-            assertions$.onNext(assertionBuffer)
-            shouldOneNext = false
+            var assertion = formatAssertionObject(assertionBuffer, currentTestNum)
+            tests$.assertions$.onNext(assertion)
+            currentTest.assertions$.onNext(assertion)
+            shouldOnNext = false
             assertionBuffer = []
           }
 
@@ -71,40 +73,25 @@ function getAssertions (tap$) {
           assertionBuffer.push(line)
         }
       },
-      assertions$.onError,
-      assertions$.onCompleted
+      tests$.onError,
+      tests$.onCompleted
     )
 
-  return assertions$
-}
-
-function getTests (tap$) {
-
-  return tap$
-    .filter(function (line) {
-
-      return REGEXES.comment.test(line)
-        && line.indexOf('# tests') < 0
-        && line.indexOf('# pass') < 0
-        && line.indexOf('# fail') < 0
-    })
+  return tests$
 }
 
 function getPlans (tap$) {
 
-  return tap$.filter(function (line) {
-
-    return REGEXES.plan.test(line)
-  })
+  return tap$.filter(isPlan)
 }
 
 function getVerions (tap$) {
 
-  return tap$.filter(function (line) {
-
-    return REGEXES.version.test(line)
-  })
+  return tap$.filter(isVersion)
 }
+
+
+
 
 module.exports = function run () {
 
@@ -113,24 +100,100 @@ module.exports = function run () {
 
   var plans$ = getPlans(tap$)
   var versions$ = getVerions(tap$)
-  var tests$ = getTests(tap$)
-  var assertions$ = getAssertions(tap$)
-  var passingAssertions$ = assertions$
-    .filter(function (assertion) {
+  var tests$ = getTestsWithAssertions(tap$)
+  var assertions$ = tests$.assertions$
+  var passingAssertions$ = assertions$.filter(function (a) { return a.ok })
+  var failingAssertions$ = assertions$.filter(function (a) { return !a.ok })
 
-      return !REGEXES.assertion.exec(assertion[0])[1]
-    })
-  var failingAssertions$ = assertions$
-    .filter(function (assertion) {
-
-      return REGEXES.assertion.exec(assertion[0])[1]
-    })
-
-
-
-
-  // tap$
-  //   .forEach(console.log.bind(console))
+  stream.tests$ = tests$
+  stream.assertions$ = assertions$
+  stream.plans$ = plans$
+  stream.versions$ = versions$
+  stream.passingAssertions$ = passingAssertions$
+  stream.failingAssertions$ = failingAssertions$
+  // stream.comments$
+  // stream.results$
 
   return stream
+}
+
+
+
+
+function isTest (line) {
+
+  return REGEXES.comment.test(line)
+    && line.indexOf('# tests') < 0
+    && line.indexOf('# pass') < 0
+    && line.indexOf('# fail') < 0
+}
+
+function isPlan (line) {
+
+  return REGEXES.plan.test(line)
+}
+
+function isVersion (line) {
+
+  return REGEXES.version.test(line)
+}
+
+function isCommentBlockStart (line) {
+
+  return line.indexOf('  ---') === 0
+}
+
+function isCommentBlockEnd (line) {
+
+  return line.indexOf('  ...') === 0
+}
+
+function isAssertion (line) {
+
+  return REGEXES.assertion.test(line)
+}
+
+function formatTestObject (line, num) {
+
+  return {
+    raw: line,
+    type: 'test',
+    title: line.replace('# ', ''),
+    number: num,
+    assertions$: new Subject()
+  }
+}
+
+function formatAssertionObject (assertion, testNum) {
+
+  var m = REGEXES.assertion.exec(assertion[0])
+  var rawMeta = assertion.slice(1)
+  var meta = rawMeta
+    .filter(function (line, idx) {
+
+      return idx !== 0 && idx !== rawMeta.length - 1
+    })
+    .map(function (line) {
+
+      return line.trim()
+    })
+    .reduce(function (accum, line) {
+
+      var arr = line.split(': ')
+      var key = arr[0].trim()
+      var value = arr[1].trim()
+
+      accum[key] = value
+      return accum
+    }, {})
+
+  return {
+    type: 'assertion',
+    title: m[3],
+    raw: assertion.join('\n'),
+    test: testNum,
+    ok: !m[1],
+    number: m[2] && Number(m[2]),
+    meta: meta
+  }
 }

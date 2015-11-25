@@ -1,22 +1,22 @@
 TAP version 13
 # test 1
 ok 1 - a test,
-  ---,
-    a: b,
+  ---
+    a: b
   ...
 ok 2 true value
 this is a console log
-not ok 3 strings match
+not ok 3 third assertion
   ---
     operator: equal
     expected: 'you'
     actual:   'me'
     at: Test.<anonymous> (/Users/scott/www/divshot/divshot-cli/test/index.js:8:5)
   ...
-ok 4 true value
-ok 5 true value
+ok 4 fourth assertion
+ok 5 fifth assertion
 # test 2
-ok 6 true value
+ok 6 sixth assertion
 # test 3
 not ok 7 plan != count
   ---

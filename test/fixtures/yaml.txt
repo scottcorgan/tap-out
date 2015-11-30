@@ -1,12 +1,12 @@
 TAP version 13
 # test 1
-ok 1 - a test,
+ok 1 first assertion has yaml,
   ---
     a: b
   ...
-ok 2 true value
+ok 2 second assertion
 this is a console log
-not ok 3 third assertion
+not ok 3 third assertion has error
   ---
     operator: equal
     expected: 'you'
@@ -20,7 +20,7 @@ ok 6 sixth assertion
 # test 3
 not ok 7 plan != count
   ---
-    operator: fail
+    operator: fail mes
     expected: 4
     actual:   3
   ...

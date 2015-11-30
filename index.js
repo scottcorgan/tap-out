@@ -22,56 +22,134 @@ function getTestsWithAssertions (tap$) {
   var tests$ = new Subject()
   tests$.assertions$ = new Subject()
   var currentTest
-  var assertionBuffer = []
+  var currentAssertion
+  var previousTest
+  var errorBuffer = []
+  var previousLine
   var currentTestNum = 0
   var parsingCommentBlock = false
   var shouldOnNext = false
+  var assertionBuffer = []
+
+  /*
+
+    TODO: create observers to consume all this and emit events, etc. ??
+
+    REFACTOR TO USE THIS:
+
+    tap$
+      .startWith(null)
+      .pairwise()
+      .map(function (pair, index) {
+
+        return {
+          previous: pair[0],
+          current: pair[1],
+          lineNumber: index
+        }
+      })
+      .forEach(
+        function onNext (val) {
+
+          console.log(val);
+        },
+        function onComplete () {
+
+        }
+      );
+
+  */
 
   tap$
     .forEach(
       function (line) {
 
         if (isTest(line)) {
-          if (currentTest) {
-            currentTest.assertions$.onCompleted()
-          }
           currentTestNum += 1
-          currentTest = formatTestObject(line, currentTestNum)
+          var test = formatTestObject(line, currentTestNum)
+          previousTest = currentTest
+          currentTest = test
           tests$.onNext(currentTest)
-          return
+        }
+
+        if (isAssertion(line)) {
+          currentAssertion = formatAssertionObject(
+            [line],
+            currentTestNum
+          )
+
+          tests$.assertions$.onNext(currentAssertion)
+          currentTest.assertions$.onNext(currentAssertion)
+          assertionBuffer = []
+        }
+
+        if (isCommentBlockStart(line)) {
+          // errorBuffer = []
+          parsingCommentBlock = true
         }
 
         if (isCommentBlockEnd(line)) {
           parsingCommentBlock = false
-          assertionBuffer.push(line)
-          shouldOnNext = true
-          return
         }
 
         if (parsingCommentBlock) {
-          assertionBuffer.push(line)
-          return
+          // errorBuffer.push(line)
         }
 
-        if (isAssertion(line) || shouldOnNext) {
 
-          // Probably in a assertion meta block
-          if (assertionBuffer.length > 0) {
-            var assertion = formatAssertionObject(assertionBuffer, currentTestNum)
-            tests$.assertions$.onNext(assertion)
-            currentTest.assertions$.onNext(assertion)
-            shouldOnNext = false
-            assertionBuffer = []
-          }
 
-          assertionBuffer.push(line)
-          return
-        }
+        // if (isTest(line)) {
+        //   // if (previousTest) {
+        //   //   previousTest.assertions$.onCompleted()
+        //   // }
+        //   currentTestNum += 1
+        //   previousTest = currentTest
+        //   currentTest = formatTestObject(line, currentTestNum)
+        //   tests$.onNext(currentTest)
+        //   if (!previousTest) {
+        //     previousTest = currentTest
+        //   }
+        //   return
+        // }
 
-        if (isCommentBlockStart(line)) {
-          parsingCommentBlock = true
-          assertionBuffer.push(line)
-        }
+        // if (isAssertion(line)) {
+        //   if (previousLine) {
+        //     var assertion = formatAssertionObject(
+        //       [previousLine].concat(assertionBuffer),
+        //       currentTestNum
+        //     )
+        //     tests$.assertions$.onNext(assertion)
+        //     previousTest.assertions$.onNext(assertion)
+        //   }
+
+        //   previousLine = line
+        //   assertionBuffer = []
+        //   return
+        // }
+
+        // if (isCommentBlockEnd(line)) {
+        //   parsingCommentBlock = false
+        //   assertionBuffer.push(line)
+        //   shouldOnNext = true
+        //   return
+        // }
+
+        // if (isCommentBlockStart(line)) {
+        //   parsingCommentBlock = true
+        //   assertionBuffer.push(line)
+        //   return
+        // }
+
+        // if (parsingCommentBlock) {
+        //   assertionBuffer.push(line)
+        //   return
+        // }
+
+        // if (shouldOnNext) {
+        //   // TODO: emit on next
+        //   shouldOnNext = false
+        //   return
+        // }
       },
       tests$.onError,
       tests$.onCompleted
@@ -101,16 +179,16 @@ module.exports = function run () {
   var plans$ = getPlans(tap$)
   var versions$ = getVerions(tap$)
   var tests$ = getTestsWithAssertions(tap$)
-  var assertions$ = tests$.assertions$
-  var passingAssertions$ = assertions$.filter(function (a) { return a.ok })
-  var failingAssertions$ = assertions$.filter(function (a) { return !a.ok })
+  // var assertions$ = tests$.assertions$
+  // var passingAssertions$ = assertions$.filter(function (a) { return a.ok })
+  // var failingAssertions$ = assertions$.filter(function (a) { return !a.ok })
 
   stream.tests$ = tests$
-  stream.assertions$ = assertions$
-  stream.plans$ = plans$
-  stream.versions$ = versions$
-  stream.passingAssertions$ = passingAssertions$
-  stream.failingAssertions$ = failingAssertions$
+  // stream.assertions$ = assertions$
+  // stream.plans$ = plans$
+  // stream.versions$ = versions$
+  // stream.passingAssertions$ = passingAssertions$
+  // stream.failingAssertions$ = failingAssertions$
   // stream.comments$
   // stream.results$
 

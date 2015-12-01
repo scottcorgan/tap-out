@@ -37,7 +37,7 @@ function getAssertions (input$) {
 
   return input$
     .filter(R.pipe(
-      R.path(['previous', 'type']),
+      R.path(['current', 'type']),
       R.equals(ASSERTION)
     ))
 }
@@ -46,7 +46,7 @@ function getCommentBlockStart (input$) {
 
   return input$
     .filter(R.pipe(
-      R.path(['previous', 'type']),
+      R.path(['current', 'type']),
       R.equals(COMMENT_BLOCK_START)
     ))
 }
@@ -55,7 +55,7 @@ function getCommentBlockEnd (input$) {
 
   return input$
     .filter(R.pipe(
-      R.path(['previous', 'type']),
+      R.path(['current', 'type']),
       R.equals(COMMENT_BLOCK_END)
     ))
 }
@@ -64,7 +64,7 @@ function getAssertionsWithComments (assertions$, blocks$) {
 
   return assertions$
     .filter(R.pipe(
-      R.path(['current', 'type']),
+      R.path(['next', 'type']),
       R.equals(COMMENT_BLOCK_START)
     ))
     .flatMap(function (line) {
@@ -73,7 +73,7 @@ function getAssertionsWithComments (assertions$, blocks$) {
         .map(function (block) {
 
           return {
-            raw: line.previous.raw,
+            raw: line.current.raw,
             meta: {
               block: block
             }
@@ -110,7 +110,7 @@ function getCommentBlocks (formattedLines$, start$, end$) {
       parsingCommentBlock = false
 
       return R.pipe(
-        R.map(R.path(['previous', 'raw'])),
+        R.map(R.path(['current', 'raw'])),
         R.flatten
       )(currentCommentBlock)
     })
@@ -120,12 +120,12 @@ function getFormattedTests (input$) {
 
   return input$
     .filter(R.pipe(
-      R.path(['previous', 'type']),
+      R.path(['current', 'type']),
       R.equals(TEST)
     ))
     .map(function (line) {
 
-      return formatTestObject(line.previous.raw, line.previous.number)
+      return formatTestObject(line.current.raw, line.current.number)
     })
 }
 
@@ -135,17 +135,14 @@ function getFormattedAssertions (assertions$, commentBlocks$) {
 
   return assertions$
     .filter(R.pipe(
-      R.path(['current', 'type']),
+      R.path(['next', 'type']),
       R.complement(R.equals(COMMENT_BLOCK_START))
     ))
-    .map(R.path(['previous']))
-    .map(function (line) {
-
-      return {
-        raw: line.raw,
-        meta: {}
-      }
-    })
+    .map(R.pipe(
+      R.path(['current']),
+      R.pick(['raw']),
+      R.merge({meta: {}})
+    ))
     .merge(assertionsWithComments$)
     // .map(/* format for output here */)
 }
@@ -197,12 +194,12 @@ module.exports = function run () {
 function formatLinePair (pair, index) {
 
   return {
-    previous: {
+    current: {
       raw: [pair[0]],
       type: getLineType(pair[0]),
       number: index
     },
-    current: {
+    next: {
       raw: [pair[1]],
       type: getLineType(pair[1]),
       number: index + 1

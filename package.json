@@ -12,6 +12,7 @@
   "author": "Scott Corgan",
   "license": "MIT",
   "dependencies": {
+    "ramda": "^0.18.0",
     "re-emitter": "^1.0.0",
     "readable-stream": "^2.0.0",
     "rx": "^4.0.7",

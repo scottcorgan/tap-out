@@ -12,12 +12,26 @@ var parsed = tapStream
 parsed.tests$
   .subscribe(function (test) {
 
-    // console.log(test.title)
+    console.log(test.title)
 
     // test.assertions$.subscribe(function (assertion) {
 
     //   console.log(assertion.title)
+    // },
+    // function (err) {
+
+    //   console.log(err.stack)
     // })
+  },
+  function (err) {
+
+    console.log(err.stack)
+  })
+
+parsed.assertions$
+  .subscribe(function (assertion) {
+
+    console.log(assertion)
   })
 
 

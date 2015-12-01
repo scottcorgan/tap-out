@@ -2,11 +2,19 @@
 
 var Rx = require('rx')
 var RxNode = require('rx-node')
+var R = require('ramda')
 var PassThrough = require('readable-stream/passthrough')
 var split = require('split')
 
 var O = Rx.Observable
 var Subject = Rx.Subject
+
+var TEST = 'TEST'
+var ASSERTION = 'ASSERTION'
+var PLAN = 'PLAN'
+var VERSION = 'VERSION'
+var COMMENT_BLOCK_START = 'COMMENT_BLOCK_START'
+var COMMENT_BLOCK_END = 'COMMENT_BLOCK_END'
 
 var REGEXES = {
   assertion: new RegExp('^(not )?ok\\b(?:(?:\\s+(\\d+))?(?:\\s+(?:(?:\\s*-\\s*)?(.*)))?)?'),
@@ -17,60 +25,189 @@ var REGEXES = {
   todo: /^(.*?)\s*#\s*TODO\s+(.*)$/
 }
 
-function getTestsWithAssertions (tap$) {
+function getGroupedLines (input$) {
+
+  return input$
+    .startWith(null)
+    .pairwise()
+    .map(formatLinePair)
+}
+
+function getAssertions (input$) {
+
+  return input$
+    .filter(R.pipe(
+      R.path(['previous', 'type']),
+      R.equals(ASSERTION)
+    ))
+}
+
+function getCommentBlockStart (input$) {
+
+  return input$
+    .filter(R.pipe(
+      R.path(['previous', 'type']),
+      R.equals(COMMENT_BLOCK_START)
+    ))
+}
+
+function getCommentBlockEnd (input$) {
+
+  return input$
+    .filter(R.pipe(
+      R.path(['previous', 'type']),
+      R.equals(COMMENT_BLOCK_END)
+    ))
+}
+
+function getAssertionsWithComments (assertions$, blocks$) {
+
+  return assertions$
+    .filter(R.pipe(
+      R.path(['current', 'type']),
+      R.equals(COMMENT_BLOCK_START)
+    ))
+    .flatMap(function (line) {
+
+      return blocks$.take(1)
+        .map(function (block) {
+
+          return {
+            raw: line.previous.raw,
+            meta: {
+              block: block
+            }
+          }
+        })
+    })
+}
+
+function getCommentBlocks (formattedLines$, start$, end$) {
+
+  var parsingCommentBlock = false
+  var currentCommentBlock = []
+
+  formattedLines$
+    .forEach(function (line) {
+
+      if (parsingCommentBlock) {
+        currentCommentBlock.push(line)
+      }
+      else {
+        currentCommentBlock = []
+      }
+    })
+
+  start$
+    .forEach(function () {
+
+      parsingCommentBlock = true
+    })
+
+  return  end$
+    .map(function (line) {
+
+      parsingCommentBlock = false
+
+      return R.pipe(
+        R.map(R.path(['previous', 'raw'])),
+        R.flatten
+      )(currentCommentBlock)
+    })
+}
+
+function getFormattedTests (input$) {
+
+  return input$
+    .filter(R.pipe(
+      R.path(['previous', 'type']),
+      R.equals(TEST)
+    ))
+    .map(function (line) {
+
+      return formatTestObject(line.previous.raw, line.previous.number)
+    })
+}
+
+function getFormattedAssertions (assertions$, commentBlocks$) {
+
+  var assertionsWithComments$ = getAssertionsWithComments(assertions$, commentBlocks$)
+
+  return assertions$
+    .filter(R.pipe(
+      R.path(['current', 'type']),
+      R.complement(R.equals(COMMENT_BLOCK_START))
+    ))
+    .map(R.path(['previous']))
+    .map(function (line) {
+
+      return {
+        raw: line.raw,
+        meta: {}
+      }
+    })
+    .merge(assertionsWithComments$)
+    // .map(/* format for output here */)
+}
+
+function getTestsWithAssertions (input$) {
 
   var tests$ = new Subject()
   tests$.assertions$ = new Subject()
-  var currentTest
-  var currentAssertion
-  var previousTest
-  var errorBuffer = []
-  var previousLine
-  var currentTestNum = 0
-  var parsingCommentBlock = false
-  var shouldOnNext = false
-  var assertionBuffer = []
 
-  /*
+  var formattedLines$ = getGroupedLines(input$)
+  var assertions$ = getAssertions(formattedLines$)
+  var commentBlockStart$ = getCommentBlockStart(formattedLines$)
+  var commentBlockEnd$ = getCommentBlockEnd(formattedLines$)
+  var commentBlocks$ = getCommentBlocks(formattedLines$, commentBlockStart$, commentBlockEnd$)
+  var formattedTests$ = getFormattedTests(formattedLines$)
+  var formattedAssertions$ = getFormattedAssertions(assertions$, commentBlocks$)
 
-    TODO: create observers to consume all this and emit events, etc. ??
-
-    REFACTOR TO USE THIS:
-
-    tap$
-      .startWith(null)
-      .pairwise()
-      .map(function (pair, index) {
-
-        return {
-          previous: pair[0],
-          current: pair[1],
-          lineNumber: index
-        }
-      })
-      .forEach(
-        function onNext (val) {
-
-          console.log(val);
-        },
-        function onComplete () {
-
-        }
-      );
-
-  */
-
-  tap$
-    .forEach(
-      function (line) {
-
-        console.log(line)
-      },
-      tests$.onError,
-      tests$.onCompleted
-    )
+  formattedTests$.forEach(tests$)
+  formattedAssertions$.forEach(tests$.assertions$)
 
   return tests$
+}
+
+module.exports = function run () {
+
+  var stream = new PassThrough()
+  var tap$ = RxNode.fromStream(stream.pipe(split()))
+
+  var plans$ = getPlans(tap$)
+  var versions$ = getVerions(tap$)
+  var tests$ = getTestsWithAssertions(tap$)
+  var assertions$ = tests$.assertions$
+  // var passingAssertions$ = assertions$.filter(function (a) { return a.ok })
+  // var failingAssertions$ = assertions$.filter(function (a) { return !a.ok })
+
+  stream.tests$ = tests$
+  stream.assertions$ = assertions$
+  stream.plans$ = plans$
+  stream.versions$ = versions$
+  // stream.passingAssertions$ = passingAssertions$
+  // stream.failingAssertions$ = failingAssertions$
+  // stream.comments$
+  // stream.results$
+
+  return stream
+}
+
+
+function formatLinePair (pair, index) {
+
+  return {
+    previous: {
+      raw: [pair[0]],
+      type: getLineType(pair[0]),
+      number: index
+    },
+    current: {
+      raw: [pair[1]],
+      type: getLineType(pair[1]),
+      number: index + 1
+    }
+  }
 }
 
 function getPlans (tap$) {
@@ -82,36 +219,6 @@ function getVerions (tap$) {
 
   return tap$.filter(isVersion)
 }
-
-
-
-
-module.exports = function run () {
-
-  var stream = new PassThrough()
-  var tap$ = RxNode.fromStream(stream.pipe(split()))
-
-  var plans$ = getPlans(tap$)
-  var versions$ = getVerions(tap$)
-  var tests$ = getTestsWithAssertions(tap$)
-  // var assertions$ = tests$.assertions$
-  // var passingAssertions$ = assertions$.filter(function (a) { return a.ok })
-  // var failingAssertions$ = assertions$.filter(function (a) { return !a.ok })
-
-  stream.tests$ = tests$
-  // stream.assertions$ = assertions$
-  // stream.plans$ = plans$
-  // stream.versions$ = versions$
-  // stream.passingAssertions$ = passingAssertions$
-  // stream.failingAssertions$ = failingAssertions$
-  // stream.comments$
-  // stream.results$
-
-  return stream
-}
-
-
-
 
 function isTest (line) {
 
@@ -133,10 +240,18 @@ function isVersion (line) {
 
 function isCommentBlockStart (line) {
 
+  if (line === null || line === undefined) {
+    return false
+  }
+
   return line.indexOf('  ---') === 0
 }
 
 function isCommentBlockEnd (line) {
+
+  if (line === null || line === undefined) {
+    return false
+  }
 
   return line.indexOf('  ...') === 0
 }
@@ -146,12 +261,39 @@ function isAssertion (line) {
   return REGEXES.assertion.test(line)
 }
 
+function getLineType (line) {
+
+  if (isTest(line)) {
+    return TEST
+  }
+
+  if (isAssertion(line)) {
+    return ASSERTION
+  }
+
+  if (isPlan(line)) {
+    return PLAN
+  }
+
+  if (isVersion(line)) {
+    return VERSION
+  }
+
+  if (isCommentBlockStart(line)) {
+    return COMMENT_BLOCK_START
+  }
+
+  if (isCommentBlockEnd(line)) {
+    return COMMENT_BLOCK_END
+  }
+}
+
 function formatTestObject (line, num) {
 
   return {
     raw: line,
     type: 'test',
-    title: line.replace('# ', ''),
+    title: line.map(R.replace('# ', '')),
     number: num,
     assertions$: new Subject()
   }

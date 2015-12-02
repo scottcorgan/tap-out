@@ -86,7 +86,6 @@ function parse$ (tap$) {
   all$.results$ = results$
   all$.passingAssertions$ = passingAssertions$
   all$.failingAssertions$ = failingAssertions$
-  all$.all$ = all$
 
   // TODO: process YAML: var yaml = require('js-yaml')
 
@@ -417,9 +416,10 @@ function formatCommentObject (line) {
   return {
     raw: raw,
     title: raw[0],
-    meta: {},
-    type: 'comment',
-    lineNumber: line.current.number
+    meta: {
+      lineNumber: line.current.number
+    },
+    type: 'comment'
   }
 }
 

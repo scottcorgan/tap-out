@@ -38,22 +38,20 @@ module.exports = {
     var tap$ = RxNode.fromStream(input.pipe(split()))
 
     RxNode.writeToStream(
-      run$(tap$).map(JSON.stringify),
-      output,
-      'utf8'
+      parse$(tap$).map(JSON.stringify),
+      output
     )
 
     return returnStream
   },
-  observable: function () {}
+  observeStream: function (stream) {
+
+    var input$ = RxNode.fromStream(stream.pipe(split()))
+    return parse$(input$)
+  }
 }
 
-function run$ (tap$) {
-
-  // var input = new PassThrough()
-  // var output = new PassThrough()
-  // var returnStream = duplexer(input, output)
-  // var tap$ = RxNode.fromStream(input.pipe(split()))
+function parse$ (tap$) {
 
   var plans$ = getPlans$(tap$)
   var versions$ = getVerions$(tap$)
@@ -80,27 +78,19 @@ function run$ (tap$) {
     )
       .subscribe(results$)
 
-  // returnStream.tests$ = tests$
-  // returnStream.assertions$ = assertions$
-  // returnStream.plans$ = plans$
-  // returnStream.versions$ = versions$
-  // returnStream.comments$ = comments$
-  // returnStream.results$ = results$
-  // returnStream.passingAssertions$ = passingAssertions$
-  // returnStream.failingAssertions$ = failingAssertions$
-  // returnStream.all$ = all$
-
-  return all$
-  // Stream interface
-  // RxNode.writeToStream(all$.map(JSON.stringify), output, 'utf8')
-
-  // TODO: Fix return interface/api
-  //       tapOut.stream()
-  //       tapOut.observer()
+  all$.tests$ = tests$
+  all$.assertions$ = assertions$
+  all$.plans$ = plans$
+  all$.versions$ = versions$
+  all$.comments$ = comments$
+  all$.results$ = results$
+  all$.passingAssertions$ = passingAssertions$
+  all$.failingAssertions$ = failingAssertions$
+  all$.all$ = all$
 
   // TODO: process YAML: var yaml = require('js-yaml')
 
-  // return returnStream
+  return all$
 }
 
 function getResult$ (name, input$) {
@@ -440,8 +430,7 @@ function formatTestObject (line, lineNumber, testNumber) {
     type: 'test',
     title: R.head(line.map(R.replace('# ', ''))),
     lineNumber: lineNumber,
-    testNumber: testNumber,
-    assertions$: new Subject()
+    testNumber: testNumber
   }
 }
 

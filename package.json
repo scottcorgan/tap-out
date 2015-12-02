@@ -21,7 +21,9 @@
     "trim": "0.0.1"
   },
   "devDependencies": {
-    "tape": "^4.0.0"
+    "highland": "^2.5.1",
+    "tape": "^4.0.0",
+    "tessed": "^2.2.0"
   },
   "directories": {
     "test": "test"

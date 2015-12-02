@@ -8,7 +8,6 @@ var split = require('split')
 var duplexer = require('duplexer')
 
 var O = Rx.Observable
-var Subject = Rx.Subject
 
 var TEST = 'TEST'
 var ASSERTION = 'ASSERTION'
@@ -26,7 +25,8 @@ var REGEXES = {
   plan: /^(\d+)\.\.(\d+)\b(?:\s+#\s+SKIP\s+(.*)$)?/,
   test: /^#\s*(.+)/,
   version: /^TAP\s+version\s+(\d+)/i,
-  todo: /^(.*?)\s*#\s*TODO\s+(.*)$/
+  todo: /^(.*?)\s*#\s*TODO\s+(.*)$/,
+  skip: /^(.*?)\s*#\s*TODO\s+(.*)$/
 }
 
 module.exports = {
@@ -37,10 +37,7 @@ module.exports = {
     var returnStream = duplexer(input, output)
     var tap$ = RxNode.fromStream(input.pipe(split()))
 
-    RxNode.writeToStream(
-      parse$(tap$).map(JSON.stringify),
-      output
-    )
+    RxNode.writeToStream(parse$(tap$).map(JSON.stringify), output)
 
     return returnStream
   },
@@ -60,7 +57,11 @@ function parse$ (tap$) {
   var comments$ = getComments$(tap$)
   var passingAssertions$ = assertions$.filter(function (a) { return a.ok })
   var failingAssertions$ = assertions$.filter(function (a) { return !a.ok })
-  var results$ = new Subject()
+  var results$ = O.merge(
+    getResult$('tests', assertions$),
+    getResult$('pass', passingAssertions$),
+    getResult$('fail', failingAssertions$)
+  )
   var all$ = O
     .merge(
       tests$,
@@ -70,13 +71,6 @@ function parse$ (tap$) {
       versions$,
       results$
     )
-
-    O.merge(
-      getResult$('tests', assertions$),
-      getResult$('pass', passingAssertions$),
-      getResult$('fail', failingAssertions$)
-    )
-      .subscribe(results$)
 
   all$.tests$ = tests$
   all$.assertions$ = assertions$

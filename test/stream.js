@@ -6,7 +6,7 @@ var H = require('highland')
 
 var tapOut = require('../')
 
-test = namespace('stream')
+var test = namespace('stream')
 
 test('parses test values', function (t) {
 

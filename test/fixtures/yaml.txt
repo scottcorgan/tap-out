@@ -11,7 +11,7 @@ not ok 3 third assertion has error
     operator: equal
     expected: 'you'
     actual:   'me'
-    at: Test.<anonymous> (/Users/scott/www/divshot/divshot-cli/test/index.js:8:5)
+    at: Test.<anonymous> (/asdf/index.js:8:5)
   ...
 ok 4 fourth assertion
 ok 5 fifth assertion

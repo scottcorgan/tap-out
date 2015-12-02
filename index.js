@@ -5,6 +5,7 @@ var RxNode = require('rx-node')
 var R = require('ramda')
 var PassThrough = require('readable-stream/passthrough')
 var split = require('split')
+var duplexer = require('duplexer')
 
 var O = Rx.Observable
 var Subject = Rx.Subject
@@ -15,34 +16,196 @@ var PLAN = 'PLAN'
 var VERSION = 'VERSION'
 var COMMENT_BLOCK_START = 'COMMENT_BLOCK_START'
 var COMMENT_BLOCK_END = 'COMMENT_BLOCK_END'
+var COMMENT = 'COMMENT'
+var RESULT = 'RESULT'
+var TODO = 'TODO'
 
 var REGEXES = {
   assertion: new RegExp('^(not )?ok\\b(?:(?:\\s+(\\d+))?(?:\\s+(?:(?:\\s*-\\s*)?(.*)))?)?'),
   result: new RegExp('(#)(\\s+)((?:[a-z][a-z]+))(\\s+)(\\d+)',['i']),
   plan: /^(\d+)\.\.(\d+)\b(?:\s+#\s+SKIP\s+(.*)$)?/,
-  comment: /^#\s*(.+)/,
+  test: /^#\s*(.+)/,
   version: /^TAP\s+version\s+(\d+)/i,
   todo: /^(.*?)\s*#\s*TODO\s+(.*)$/
 }
 
-function getGroupedLines (input$) {
+module.exports = {
+  stream: function () {
+
+    var input = new PassThrough()
+    var output = new PassThrough()
+    var returnStream = duplexer(input, output)
+    var tap$ = RxNode.fromStream(input.pipe(split()))
+
+    RxNode.writeToStream(
+      run$(tap$).map(JSON.stringify),
+      output,
+      'utf8'
+    )
+
+    return returnStream
+  },
+  observable: function () {}
+}
+
+function run$ (tap$) {
+
+  // var input = new PassThrough()
+  // var output = new PassThrough()
+  // var returnStream = duplexer(input, output)
+  // var tap$ = RxNode.fromStream(input.pipe(split()))
+
+  var plans$ = getPlans$(tap$)
+  var versions$ = getVerions$(tap$)
+  var tests$ = getTests$(tap$)
+  var assertions$ = getAssertions$(tap$)
+  var comments$ = getComments$(tap$)
+  var passingAssertions$ = assertions$.filter(function (a) { return a.ok })
+  var failingAssertions$ = assertions$.filter(function (a) { return !a.ok })
+  var results$ = new Subject()
+  var all$ = O
+    .merge(
+      tests$,
+      assertions$,
+      comments$,
+      plans$,
+      versions$,
+      results$
+    )
+
+    O.merge(
+      getResult$('tests', assertions$),
+      getResult$('pass', passingAssertions$),
+      getResult$('fail', failingAssertions$)
+    )
+      .subscribe(results$)
+
+  // returnStream.tests$ = tests$
+  // returnStream.assertions$ = assertions$
+  // returnStream.plans$ = plans$
+  // returnStream.versions$ = versions$
+  // returnStream.comments$ = comments$
+  // returnStream.results$ = results$
+  // returnStream.passingAssertions$ = passingAssertions$
+  // returnStream.failingAssertions$ = failingAssertions$
+  // returnStream.all$ = all$
+
+  return all$
+  // Stream interface
+  // RxNode.writeToStream(all$.map(JSON.stringify), output, 'utf8')
+
+  // TODO: Fix return interface/api
+  //       tapOut.stream()
+  //       tapOut.observer()
+
+  // TODO: process YAML: var yaml = require('js-yaml')
+
+  // return returnStream
+}
+
+function getResult$ (name, input$) {
 
   return input$
-    .startWith(null)
+    .scan(function (prev) {return prev + 1}, 0)
+    .last()
+    .map(function (count) {
+
+      return {
+        type: 'result',
+        name: name,
+        count: count,
+        raw: ['# ' + name + ' ' + count]
+      }
+    })
+}
+
+function getAssertions$ (input$) {
+
+  var formattedLines$ = getGroupedLines$(input$)
+  var tests$ = getTests$(input$)
+  var assertions$ = getRawAssertions$(formattedLines$)
+  var commentBlockStart$ = getCommentBlockStart$(formattedLines$)
+  var commentBlockEnd$ = getCommentBlockEnd$(formattedLines$)
+  var commentBlocks$ = getCommentBlocks$(formattedLines$, commentBlockStart$, commentBlockEnd$)
+
+  return getFormattedAssertions$(assertions$, commentBlocks$, tests$)
+}
+
+function getTests$ (input$) {
+
+  var formattedLines$ = getGroupedLines$(input$)
+  return getFormattedTests$(formattedLines$)
+}
+
+function getComments$ (input$) {
+
+  var parsingCommentBlock = false
+  var formattedLines$ = getGroupedLines$(input$)
+  var commentBlockStart$ = getCommentBlockStart$(formattedLines$)
+  var commentBlockEnd$ = getCommentBlockEnd$(formattedLines$)
+
+  commentBlockStart$.forEach(function () {parsingCommentBlock = true})
+  commentBlockEnd$.forEach(function () {parsingCommentBlock = false})
+
+  return formattedLines$
+    .filter(function (line) {
+
+      if (
+        parsingCommentBlock
+        || isTest(line.current.raw[0])
+        || isAssertion(line.current.raw[0])
+        || isVersion(line.current.raw[0])
+        || isCommentBlockStart(line.current.raw[0])
+        || isCommentBlockEnd(line.current.raw[0])
+        || isPlan(line.current.raw[0])
+        || isResult(line.current.raw[0])
+        || line.current.raw[0] === ''
+      ) {
+        return false
+      }
+
+      return true
+    })
+    .map(formatCommentObject)
+}
+
+function getPlans$ (input$) {
+
+  return input$
+    .filter(isPlan)
+    .map(formatPlanObject)
+}
+
+function getVerions$ (input$) {
+
+  return input$
+    .filter(isVersion)
+    .map(formatVersionObject)
+}
+
+function getGroupedLines$ (input$) {
+
+  return input$
     .pairwise()
     .map(formatLinePair)
 }
 
-function getAssertions (input$) {
+function getRawAssertions$ (input$) {
 
   return input$
     .filter(R.pipe(
       R.path(['current', 'type']),
       R.equals(ASSERTION)
     ))
+    .map(function (line, index) {
+
+      line.current.assertionNumber = index + 1
+      line.next.assertionNumber = index + 2
+      return line
+    })
 }
 
-function getCommentBlockStart (input$) {
+function getCommentBlockStart$ (input$) {
 
   return input$
     .filter(R.pipe(
@@ -51,7 +214,7 @@ function getCommentBlockStart (input$) {
     ))
 }
 
-function getCommentBlockEnd (input$) {
+function getCommentBlockEnd$ (input$) {
 
   return input$
     .filter(R.pipe(
@@ -74,15 +237,17 @@ function getAssertionsWithComments (assertions$, blocks$) {
 
           return {
             raw: line.current.raw,
+            lineNumber: line.current.number,
+            assertionNumber: line.current.assertionNumber,
             meta: {
-              block: block
-            }
+              block: block,
+            },
           }
         })
     })
 }
 
-function getCommentBlocks (formattedLines$, start$, end$) {
+function getCommentBlocks$ (formattedLines$, start$, end$) {
 
   var parsingCommentBlock = false
   var currentCommentBlock = []
@@ -104,125 +269,95 @@ function getCommentBlocks (formattedLines$, start$, end$) {
       parsingCommentBlock = true
     })
 
+  var formatBlock = R.pipe(
+    R.map(R.path(['current', 'raw'])),
+    R.flatten
+  )
+
   return  end$
-    .map(function (line) {
+    .map(function () {
 
       parsingCommentBlock = false
 
-      return R.pipe(
-        R.map(R.path(['current', 'raw'])),
-        R.flatten
-      )(currentCommentBlock)
+      return formatBlock(currentCommentBlock)
     })
 }
 
-function getFormattedTests (input$) {
+function getFormattedTests$ (input$) {
 
   return input$
     .filter(R.pipe(
       R.path(['current', 'type']),
       R.equals(TEST)
     ))
-    .map(function (line) {
+    .map(function (line, index) {
 
-      return formatTestObject(line.current.raw, line.current.number)
+      return formatTestObject(line.current.raw, line.current.number, index + 1)
     })
 }
 
-function getFormattedAssertions (assertions$, commentBlocks$) {
+function getFormattedAssertions$ (assertions$, commentBlocks$, tests$) {
 
+  var currentTestNumber = 0
   var assertionsWithComments$ = getAssertionsWithComments(assertions$, commentBlocks$)
+
+  tests$.forEach(function (line) {currentTestNumber = line.testNumber})
 
   return assertions$
     .filter(R.pipe(
       R.path(['next', 'type']),
       R.complement(R.equals(COMMENT_BLOCK_START))
     ))
-    .map(R.pipe(
-      R.path(['current']),
-      R.pick(['raw']),
-      R.merge({meta: {}})
-    ))
+    .map(function (line) {
+
+      var formattedLine = R.pipe(
+        R.path(['current']),
+        R.pick(['raw']),
+        R.merge({
+          lineNumber: line.current.number,
+          assertionNumber: line.current.assertionNumber,
+          meta: {
+            block: [],
+          },
+        })
+      )(line)
+
+      return formattedLine
+    })
     .merge(assertionsWithComments$)
-    // .map(/* format for output here */)
+    .map(function (line) {
+
+      return formatAssertionObject(line, currentTestNumber)
+    })
 }
-
-function getTestsWithAssertions (input$) {
-
-  var tests$ = new Subject()
-  tests$.assertions$ = new Subject()
-
-  var formattedLines$ = getGroupedLines(input$)
-  var assertions$ = getAssertions(formattedLines$)
-  var commentBlockStart$ = getCommentBlockStart(formattedLines$)
-  var commentBlockEnd$ = getCommentBlockEnd(formattedLines$)
-  var commentBlocks$ = getCommentBlocks(formattedLines$, commentBlockStart$, commentBlockEnd$)
-  var formattedTests$ = getFormattedTests(formattedLines$)
-  var formattedAssertions$ = getFormattedAssertions(assertions$, commentBlocks$)
-
-  formattedTests$.forEach(tests$)
-  formattedAssertions$.forEach(tests$.assertions$)
-
-  return tests$
-}
-
-module.exports = function run () {
-
-  var stream = new PassThrough()
-  var tap$ = RxNode.fromStream(stream.pipe(split()))
-
-  var plans$ = getPlans(tap$)
-  var versions$ = getVerions(tap$)
-  var tests$ = getTestsWithAssertions(tap$)
-  var assertions$ = tests$.assertions$
-  // var passingAssertions$ = assertions$.filter(function (a) { return a.ok })
-  // var failingAssertions$ = assertions$.filter(function (a) { return !a.ok })
-
-  stream.tests$ = tests$
-  stream.assertions$ = assertions$
-  stream.plans$ = plans$
-  stream.versions$ = versions$
-  // stream.passingAssertions$ = passingAssertions$
-  // stream.failingAssertions$ = failingAssertions$
-  // stream.comments$
-  // stream.results$
-
-  return stream
-}
-
 
 function formatLinePair (pair, index) {
 
   return {
     current: {
-      raw: [pair[0]],
+      raw: R.of(pair[0]),
       type: getLineType(pair[0]),
       number: index
     },
     next: {
-      raw: [pair[1]],
+      raw: R.of(pair[1]),
       type: getLineType(pair[1]),
       number: index + 1
     }
   }
 }
 
-function getPlans (tap$) {
-
-  return tap$.filter(isPlan)
-}
-
-function getVerions (tap$) {
-
-  return tap$.filter(isVersion)
-}
-
 function isTest (line) {
 
-  return REGEXES.comment.test(line)
+  return REGEXES.test.test(line)
     && line.indexOf('# tests') < 0
     && line.indexOf('# pass') < 0
     && line.indexOf('# fail') < 0
+}
+
+function isResult (line) {
+
+  return REGEXES.result.test(line)
 }
 
 function isPlan (line) {
@@ -285,47 +420,65 @@ function getLineType (line) {
   }
 }
 
-function formatTestObject (line, num) {
+function formatCommentObject (line) {
+
+  var raw = [line.current.raw[0]]
+
+  return {
+    raw: raw,
+    title: raw[0],
+    meta: {},
+    type: 'comment',
+    lineNumber: line.current.number
+  }
+}
+
+function formatTestObject (line, lineNumber, testNumber) {
 
   return {
     raw: line,
     type: 'test',
-    title: line.map(R.replace('# ', '')),
-    number: num,
+    title: R.head(line.map(R.replace('# ', ''))),
+    lineNumber: lineNumber,
+    testNumber: testNumber,
     assertions$: new Subject()
   }
 }
 
-function formatAssertionObject (assertion, testNum) {
+function formatAssertionObject (line, testNumber) {
 
-  var m = REGEXES.assertion.exec(assertion[0])
-  var rawMeta = assertion.slice(1)
-  var meta = rawMeta
-    .filter(function (line, idx) {
-
-      return idx !== 0 && idx !== rawMeta.length - 1
-    })
-    .map(function (line) {
-
-      return line.trim()
-    })
-    .reduce(function (accum, line) {
-
-      var arr = line.split(': ')
-      var key = arr[0].trim()
-      var value = arr[1].trim()
-
-      accum[key] = value
-      return accum
-    }, {})
+  var m = REGEXES.assertion.exec(line.raw[0])
 
   return {
     type: 'assertion',
     title: m[3],
-    raw: assertion.join('\n'),
-    test: testNum,
+    raw: R.of(line.raw.concat(line.meta.block).join('\n')),
     ok: !m[1],
-    number: m[2] && Number(m[2]),
-    meta: meta
+    meta: R.merge({
+      lineNumber: line.lineNumber,
+      assertionNumber: line.assertionNumber,
+      testNumber: testNumber
+    }, line.meta),
+  }
+}
+
+function formatPlanObject (line) {
+
+  var m = REGEXES.plan.exec(line);
+
+  return {
+    type: 'plan',
+    raw: R.of(line),
+    from: m[1] && Number(m[1]),
+    to: m[2] && Number(m[2]),
+    skip: m[3]
+  }
+}
+
+function formatVersionObject (line) {
+
+  return {
+    raw: R.of(line),
+    type: 'version'
   }
 }

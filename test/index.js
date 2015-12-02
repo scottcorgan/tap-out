@@ -1,44 +1,55 @@
 var fs = require('fs')
 var tapOut = require('../')
 var test = require('tape')
+var format = require('chalk')
+var split = require('split')
 
 var tapStream = fs.createReadStream(__dirname + '/fixtures/yaml.txt')
 
-var parser = tapOut()
-
 var parsed = tapStream
-  .pipe(tapOut())
+  .pipe(tapOut.stream())
+  .pipe(process.stdout)
 
-parsed.tests$
-  .subscribe(function (test) {
-
-    console.log(test)
-
-    // test.assertions$.subscribe(function (assertion) {
-
-    //   console.log(assertion.title)
-    // },
-    // function (err) {
-
-    //   console.log(err.stack)
-    // })
-  },
-  function (err) {
-
-    console.log(err.stack)
-  })
-
-parsed.assertions$
-  .subscribe(function (assertion) {
-
-    console.log(assertion)
-  })
+// RxNode.fromStream(tapStream.pipe(split()))
+//   .subscribe(tapOut.observable())
 
 
-// parsed.assertions$.subscribe(function (assertion) {
 
-//   console.log(assertion.title)
-// })
+// parsed.all$
+//   .forEach(function (output) {
+
+//     console.log(output.type, output.title)
+//   })
+
+// parsed.plans$
+//   .forEach(function (line) {console.log(line.type)})
+
+// parsed.versions$
+//   .forEach(function (line) {console.log(line.type)})
+
+// parsed.tests$
+//   .forEach(function (test) {
+
+//     console.log(format.bold(test.title))
+//   })
+
+// parsed.assertions$
+//   .forEach(function (assertion) {
+
+//     // console.log(assertion)
+//     console.log(format[assertion.ok ? 'green' : 'red'](assertion.title))
+
+//     if (assertion.meta.block.length > 0) {
+//       console.log(assertion.meta.block.join('\n'))
+//     }
+//   })
+
+// parsed.comments$
+//  .forEach(function (comment) {
+
+//   console.log(format.yellow(comment.title))
+//  })
+
 
 
 // test('output event', function (t) {

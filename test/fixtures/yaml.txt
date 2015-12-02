@@ -26,6 +26,6 @@ not ok 7 plan != count
   ...
 
 1..7
-# tests 6
-# pass  4
+# tests 7
+# pass  5
 # fail  2

@@ -225,7 +225,7 @@ test('parses result values', function (t) {
   return function (done) {
 
     resultsFromStream(yamlTapStream())
-      .reduce([], function (prev, line) {return prev.concat(line)})
+      .reduce([], R.concat)
       .each(function (lines) {
 
         t.deepEqual(

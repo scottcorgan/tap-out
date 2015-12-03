@@ -41,6 +41,8 @@ module.exports = {
 
     return returnStream
   },
+
+  // TODO: not completely happy about this name for the method
   observeStream: function (stream) {
 
     var input$ = RxNode.fromStream(stream.pipe(split()))

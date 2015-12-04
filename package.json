@@ -4,7 +4,8 @@
   "description": "A different tap parser",
   "main": "index.js",
   "scripts": {
-    "test": "tape test/*.js"
+    "test": "tape test/*.js",
+    "incept": "tape test/*.js | ./spike/format.js"
   },
   "bin": {
     "tap-out": "bin/cmd.js"
@@ -14,7 +15,7 @@
   "dependencies": {
     "ramda": "^0.18.0",
     "re-emitter": "^1.0.0",
-    "readable-stream": "^2.0.0",
+    "readable-stream": "^2.0.4",
     "rx": "^4.0.7",
     "rx-node": "^1.0.1",
     "split": "^1.0.0",

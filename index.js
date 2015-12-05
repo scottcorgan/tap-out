@@ -6,6 +6,7 @@ var R = require('ramda')
 var PassThrough = require('readable-stream/passthrough')
 var split = require('split')
 var duplexer = require('duplexer')
+var jsYaml = require('js-yaml')
 
 var O = Rx.Observable
 
@@ -19,6 +20,8 @@ var COMMENT = 'COMMENT'
 var RESULT = 'RESULT'
 var TODO = 'TODO'
 
+var COMMENT_BLOCK_PADDING_SIZE = 2
+
 var REGEXES = {
   assertion: new RegExp('^(not )?ok\\b(?:(?:\\s+(\\d+))?(?:\\s+(?:(?:\\s*-\\s*)?(.*)))?)?'),
   result: new RegExp('(#)(\\s+)((?:[a-z][a-z]+))(\\s+)(\\d+)',['i']),
@@ -28,6 +31,13 @@ var REGEXES = {
   todo: /^(.*?)\s*#\s*TODO\s+(.*)$/,
   skip: /^(.*?)\s*#\s*TODO\s+(.*)$/
 }
+
+var removeCommentBlockPadding = R.map(R.drop(COMMENT_BLOCK_PADDING_SIZE))
+var parseYamlBlock = R.pipe(
+  removeCommentBlockPadding,
+  R.join('\n'),
+  jsYaml.safeLoad
+)
 
 module.exports = {
   stream: function () {
@@ -83,8 +93,6 @@ function parse$ (tap$) {
   all$.passingAssertions$ = passingAssertions$
   all$.failingAssertions$ = failingAssertions$
 
-  // TODO: process YAML: var yaml = require('js-yaml')
-
   return all$
 }
 
@@ -99,7 +107,7 @@ function getResult$ (name, input$) {
         type: 'result',
         name: name,
         count: count,
-        raw: ['# ' + name + ' ' + count]
+        raw: '# ' + name + ' ' + count
       }
     })
 }
@@ -137,14 +145,14 @@ function getComments$ (input$) {
 
       if (
         parsingCommentBlock
-        || isTest(line.current.raw[0])
-        || isAssertion(line.current.raw[0])
-        || isVersion(line.current.raw[0])
-        || isCommentBlockStart(line.current.raw[0])
-        || isCommentBlockEnd(line.current.raw[0])
-        || isPlan(line.current.raw[0])
-        || isResult(line.current.raw[0])
-        || line.current.raw[0] === ''
+        || isTest(line.current.raw)
+        || isAssertion(line.current.raw)
+        || isVersion(line.current.raw)
+        || isCommentBlockStart(line.current.raw)
+        || isCommentBlockEnd(line.current.raw)
+        || isPlan(line.current.raw)
+        || isResult(line.current.raw)
+        || line.current.raw === ''
       ) {
         return false
       }
@@ -218,15 +226,15 @@ function getAssertionsWithComments (assertions$, blocks$) {
     .flatMap(function (line) {
 
       return blocks$.take(1)
-        .map(function (block) {
+        .map(function (rawDiagnostic) {
 
           return {
             raw: line.current.raw,
             lineNumber: line.current.number,
             assertionNumber: line.current.assertionNumber,
-            meta: {
-              block: block,
-            },
+            diagnostic: parseYamlBlock(rawDiagnostic),
+            rawDiagnostic: rawDiagnostic,
+            meta: {},
           }
         })
     })
@@ -236,6 +244,10 @@ function getCommentBlocks$ (formattedLines$, start$, end$) {
 
   var parsingCommentBlock = false
   var currentCommentBlock = []
+  var formatBlock = R.pipe(
+    R.map(R.path(['current', 'raw'])),
+    R.flatten
+  )
 
   formattedLines$
     .forEach(function (line) {
@@ -249,21 +261,16 @@ function getCommentBlocks$ (formattedLines$, start$, end$) {
     })
 
   start$
-    .forEach(function () {
+    .forEach(function (line) {
 
+      currentCommentBlock = [line]
       parsingCommentBlock = true
     })
-
-  var formatBlock = R.pipe(
-    R.map(R.path(['current', 'raw'])),
-    R.flatten
-  )
 
   return  end$
     .map(function () {
 
       parsingCommentBlock = false
-
       return formatBlock(currentCommentBlock)
     })
 }
@@ -301,9 +308,8 @@ function getFormattedAssertions$ (assertions$, commentBlocks$, tests$) {
         R.merge({
           lineNumber: line.current.number,
           assertionNumber: line.current.assertionNumber,
-          meta: {
-            block: [],
-          },
+          diagnostic: {},
+          meta: {}
         })
       )(line)
 
@@ -320,12 +326,12 @@ function formatLinePair (pair, index) {
 
   return {
     current: {
-      raw: R.of(pair[0]),
+      raw: pair[0],
       type: getLineType(pair[0]),
       number: index
     },
     next: {
-      raw: R.of(pair[1]),
+      raw: pair[1],
       type: getLineType(pair[1]),
       number: index + 1
     }
@@ -407,11 +413,11 @@ function getLineType (line) {
 
 function formatCommentObject (line) {
 
-  var raw = [line.current.raw[0]]
+  var raw = line.current.raw
 
   return {
     raw: raw,
-    title: raw[0],
+    title: raw,
     meta: {
       lineNumber: line.current.number
     },
@@ -424,7 +430,7 @@ function formatTestObject (line, lineNumber, testNumber) {
   return {
     raw: line,
     type: 'test',
-    title: R.head(line.map(R.replace('# ', ''))),
+    title: line.replace('# ', ''),
     lineNumber: lineNumber,
     testNumber: testNumber
   }
@@ -432,13 +438,19 @@ function formatTestObject (line, lineNumber, testNumber) {
 
 function formatAssertionObject (line, testNumber) {
 
-  var m = REGEXES.assertion.exec(line.raw[0])
+  var m = REGEXES.assertion.exec(line.raw)
+  var rawDiagnostic = ''
+
+  if (line.rawDiagnostic) {
+    rawDiagnostic = line.rawDiagnostic.join('\n')
+  }
 
   return {
     type: 'assertion',
     title: m[3],
-    raw: R.of(line.raw.concat(line.meta.block).join('\n')),
+    raw: line.raw + '\n' + rawDiagnostic,
     ok: !m[1],
+    diagnostic: line.diagnostic, // TODO: rename this to "diagnostic"
     meta: R.merge({
       lineNumber: line.lineNumber,
       assertionNumber: line.assertionNumber,
@@ -453,7 +465,7 @@ function formatPlanObject (line) {
 
   return {
     type: 'plan',
-    raw: R.of(line),
+    raw: line,
     from: m[1] && Number(m[1]),
     to: m[2] && Number(m[2]),
     skip: m[3]
@@ -463,7 +475,7 @@ function formatPlanObject (line) {
 function formatVersionObject (line) {
 
   return {
-    raw: R.of(line),
+    raw: line,
     type: 'version'
   }
 }

@@ -18,7 +18,7 @@ test('parses test values', function (t) {
       .head()
       .each(function (line) {
 
-        t.deepEqual(line.raw, ['# test 1'], 'raw')
+        t.deepEqual(line.raw, '# test 1', 'raw')
         t.equal(line.type, 'test', 'type')
         t.equal(line.title, 'test 1', 'title')
         t.equal(line.lineNumber, 1, 'lineNumber')
@@ -54,14 +54,14 @@ test('parses assertion values', function (t) {
       .head()
       .each(function (line) {
 
-        t.deepEqual(line.raw, [ 'ok 1 first assertion has yaml,\n    a: b\n  ...' ], 'raw')
+        t.deepEqual(line.raw, 'ok 1 first assertion has yaml,\n  ---\n    a: b\n  ...', 'raw')
         t.equal(line.type, 'assertion', 'type')
         t.equal(line.title, 'first assertion has yaml,', 'title')
         t.equal(line.ok, true, 'ok')
         t.equal(line.meta.lineNumber, 2, 'lineNumber')
         t.equal(line.meta.assertionNumber, 1, 'assertionNumber')
         t.equal(line.meta.testNumber, 1, 'testNumber')
-        t.deepEqual(line.meta.block, [ '    a: b', '  ...' ], 'block')
+        t.deepEqual(line.diagnostic, {a: 'b'}, 'comment')
       })
   }
 })
@@ -115,6 +115,27 @@ test('gets all failing assertions', function (t) {
   }
 })
 
+test('parses yaml in failing assertions', function (t) {
+
+  t.plan(1)
+
+  return function (done) {
+
+    assertionsFromStream(yamlTapStream())
+      .filter(function (line) {return !line.ok})
+      .head()
+      .each(function (assertion) {
+
+        t.deepEqual(assertion.diagnostic, {
+          operator: 'equal',
+          expected: 'you',
+          actual: 'me',
+          at: 'Test.<anonymous> (/asdf/index.js:8:5)'
+        }, 'parsed yaml block')
+      })
+  }
+})
+
 test('parses comment values', function (t) {
 
   t.plan(4)
@@ -125,7 +146,7 @@ test('parses comment values', function (t) {
       .head()
       .each(function (line) {
 
-        t.deepEqual(line.raw, [ 'this is a console log' ], 'raw')
+        t.deepEqual(line.raw, 'this is a console log', 'raw')
         t.equal(line.type, 'comment', 'type')
         t.equal(line.title, 'this is a console log', 'title')
         t.equal(line.meta.lineNumber, 7, 'lineNumber')
@@ -160,7 +181,7 @@ test('parses plan values', function (t) {
       .head()
       .each(function (line) {
 
-        t.deepEqual(line.raw, [ '1..7' ], 'raw')
+        t.deepEqual(line.raw, '1..7', 'raw')
         t.equal(line.type, 'plan', 'type')
         t.equal(line.from, 1, 'from')
         t.equal(line.to, 7, 'to')
@@ -195,7 +216,7 @@ test('parses version values', function (t) {
       .head()
       .each(function (line) {
 
-        t.deepEqual(line.raw, [ 'TAP version 13' ], 'raw')
+        t.deepEqual(line.raw, 'TAP version 13', 'raw')
         t.equal(line.type, 'version', 'type')
       })
   }
@@ -230,9 +251,9 @@ test('parses result values', function (t) {
 
         t.deepEqual(
           lines,
-          [ { type: 'result', name: 'tests', count: 7, raw: [ '# tests 7' ] },
-            { type: 'result', name: 'pass', count: 5, raw: [ '# pass 5' ] },
-            { type: 'result', name: 'fail', count: 2, raw: [ '# fail 2' ] } ],
+          [ { type: 'result', name: 'tests', count: 7, raw: '# tests 7' },
+            { type: 'result', name: 'pass', count: 5, raw: '# pass 5' },
+            { type: 'result', name: 'fail', count: 2, raw: '# fail 2' } ],
           'all results'
         )
       })

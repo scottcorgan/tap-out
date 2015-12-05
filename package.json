@@ -4,8 +4,8 @@
   "description": "A different tap parser",
   "main": "index.js",
   "scripts": {
-    "test": "tape test/*.js",
-    "incept": "tape test/*.js | ./spike/format.js"
+    "test_real": "tape test/*.js",
+    "test": "tape test/*.js | ./spike/format.js"
   },
   "bin": {
     "tap-out": "bin/cmd.js"
@@ -13,6 +13,7 @@
   "author": "Scott Corgan",
   "license": "MIT",
   "dependencies": {
+    "js-yaml": "^3.4.6",
     "ramda": "^0.18.0",
     "re-emitter": "^1.0.0",
     "readable-stream": "^2.0.4",

@@ -533,3 +533,38 @@ test('handles raw error string', function (t) {
   p.end();
 });
 
+test('handles multiline error string with |-', function (t) {
+
+  t.plan(2);
+
+  var mockTap = [
+    "TAP version 13",
+    "# is true",
+    "ok 1 true value",
+    "not ok 2 object deep equal with cross",
+    "  ---",
+    "    operator: deepEqual",
+    "    expected: |-",
+    "      { a: 1, b: 2 }",
+    "    actual: |-",
+    "      { a: 1, b: 3 }",
+    "    at: Test.<anonymous> (/Users/germ/Projects/a/b/test.js:7:5)",
+    "  ...",
+    "",
+    "1..2",
+  ];
+
+  var p = parser();
+
+  p.on('output', function (output) {
+    var assert = output.fail[0];
+    t.equal(assert.error.expected, '{ a: 1, b: 2 }');
+    t.equal(assert.error.actual, '{ a: 1, b: 3 }');
+  });
+
+  mockTap.forEach(function (line) {
+    p.write(line + '\n');
+  });
+  p.end();
+
+});

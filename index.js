@@ -30,6 +30,7 @@ function Parser() {
   this.testNumber = 0;
 
   this.previousLine = '';
+  this.currentNextLineError = null;
   this.writingErrorOutput = false;
   this.writingErrorStackOutput = false;
   this.tmpErrorOutput = '';
@@ -110,6 +111,7 @@ Parser.prototype._handleError = function _handleError(line) {
   // End of error output
   else if (isErrorOutputEnd(line)) {
     this.writingErrorOutput = false;
+    this.currentNextLineError = null;
     this.writingErrorStackOutput = false;
 
     // Emit error here so it has the full error message with it
@@ -174,7 +176,17 @@ Parser.prototype._handleError = function _handleError(line) {
       }
     }
 
-    lastAssert.error[m[0]] = msg;
+    // outputting expected/actual object or array
+    if (this.currentNextLineError) {
+      lastAssert.error[this.currentNextLineError] = trim(line);
+      this.currentNextLineError = null;
+    }
+    else if (trim(m[1]) === '|-') {
+      this.currentNextLineError = m[0];
+    }
+    else {
+      lastAssert.error[m[0]] = msg;
+    }
   }
 };
 

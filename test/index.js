@@ -32,7 +32,8 @@ test('output event', function (t) {
       ],
       versions: [],
       comments: [],
-      plans: [{ from: 1, to: 2, raw: '1..2', skip: undefined, type: 'plan' }]
+      plans: [{ from: 1, to: 2, raw: '1..2', skip: undefined, type: 'plan' }],
+      errors: []
     }, 'output data');
   });
 
@@ -72,7 +73,8 @@ test('output callback', function (t) {
       ],
       versions: [],
       comments: [],
-      plans: [{ from: 1, to: 2, raw: '1..2', skip: undefined, type: 'plan' }]
+      plans: [{ from: 1, to: 2, raw: '1..2', skip: undefined, type: 'plan' }],
+      errors: []
     }, 'output data');
   });
 
@@ -560,6 +562,91 @@ test('handles multiline error string with |-', function (t) {
     var assert = output.fail[0];
     t.equal(assert.error.expected, '{ a: 1, b: 2 }');
     t.equal(assert.error.actual, '{ a: 1, b: 3 }');
+  });
+
+  mockTap.forEach(function (line) {
+    p.write(line + '\n');
+  });
+  p.end();
+
+});
+
+test('output without plan', function (t) {
+
+  t.plan(1);
+
+  var mockTap = [
+    "# is true",
+    "ok 1 true value",
+  ];
+
+  var p = parser();
+
+  p.on('output', function (output) {
+
+    t.deepEqual(output, {
+      asserts: [
+        { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' }
+      ],
+      fail: [],
+      pass: [
+        { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' }
+      ],
+      results: [],
+      tests: [
+        { name: 'is true', number: 1, raw: '# is true', type: 'test' }
+      ],
+      versions: [],
+      comments: [],
+      plans: [],
+      errors: [
+        { message: 'no plan provided', type: 'error' }
+      ]
+    }, 'output data with empty plans and no plan provided');
+  });
+
+  mockTap.forEach(function (line) {
+    p.write(line + '\n');
+  });
+  p.end();
+
+});
+
+test('output with assert count and plan mismatch', function (t) {
+
+  t.plan(1);
+
+  var mockTap = [
+    "# is true",
+    "ok 1 true value",
+    "1..2",
+  ];
+
+  var p = parser();
+
+  p.on('output', function (output) {
+
+    t.deepEqual(output, {
+      asserts: [
+        { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' }
+      ],
+      fail: [],
+      pass: [
+        { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' }
+      ],
+      results: [],
+      tests: [
+        { name: 'is true', number: 1, raw: '# is true', type: 'test' }
+      ],
+      versions: [],
+      comments: [],
+      plans: [
+        { from: 1, to: 2, raw: '1..2', skip: undefined, type: 'plan' }
+      ],
+      errors: [
+        { message: 'incorrect number of assertions made', type: 'error' }
+      ]
+    }, 'output data with empty assert count and plan mismatch error');
   });
 
   mockTap.forEach(function (line) {

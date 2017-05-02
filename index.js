@@ -195,13 +195,26 @@ Parser.prototype._handleError = function _handleError(line) {
 Parser.prototype._handleEnd = function _handleEnd() {
   var plan = this.results.plans.length ? this.results.plans[0] : null;
   var count = this.results.asserts.length;
+  var first = count && this.results.asserts.reduce(firstAssertion);
+  var last = count && this.results.asserts.reduce(lastAssertion);
 
   if (!plan) {
     if (count > 0) {
       this.results.errors.push(error('no plan provided'));
     }
-  } else if (this.results.fail.length === 0 && count !== (plan.to - plan.from + 1)) {
+    return;
+  }
+
+  if (this.results.fail.length > 0) {
+    return;
+  }
+
+  if (count !== (plan.to - plan.from + 1)) {
     this.results.errors.push(error('incorrect number of assertions made'));
+  } else if (first && first.number !== plan.from) {
+    this.results.errors.push(error('first assertion number does not equal the plan start'));
+  } else if (last && last.number !== plan.to) {
+    this.results.errors.push(error('last assertion number does not equal the plan end'));
   }
 };
 
@@ -264,4 +277,12 @@ function isRawTapTestStatus (str) {
 
   var rawTapTestStatusRegex = new RegExp('(\\d+)(\\.)(\\.)(\\d+)');;
   return rawTapTestStatusRegex.exec(str);
+}
+
+function firstAssertion(first, assert) {
+  return assert.number < first.number ? assert : first;
+}
+
+function lastAssertion(last, assert) {
+  return assert.number > last.number ? assert : last;
 }

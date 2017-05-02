@@ -655,3 +655,50 @@ test('output with assert count and plan mismatch', function (t) {
   p.end();
 
 });
+
+test('output with plan end and assertion number mismatch', function (t) {
+
+  t.plan(1);
+
+  var mockTap = [
+    "# is true",
+    "ok 1 true value",
+    'ok 3 true value',
+    "1..2",
+  ];
+
+  var p = parser();
+
+  p.on('output', function (output) {
+
+    t.deepEqual(output, {
+      asserts: [
+        { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' },
+        { name: 'true value', number: 3, ok: true, raw: 'ok 3 true value', test: 1, type: 'assert' }
+      ],
+      fail: [],
+      pass: [
+        { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' },
+        { name: 'true value', number: 3, ok: true, raw: 'ok 3 true value', test: 1, type: 'assert' }
+      ],
+      results: [],
+      tests: [
+        { name: 'is true', number: 1, raw: '# is true', type: 'test' }
+      ],
+      versions: [],
+      comments: [],
+      plans: [
+        { from: 1, to: 2, raw: '1..2', skip: undefined, type: 'plan' }
+      ],
+      errors: [
+        { message: 'last assertion number does not equal the plan end', type: 'error' }
+      ]
+    }, 'output data with plan end error');
+  });
+
+  mockTap.forEach(function (line) {
+    p.write(line + '\n');
+  });
+  p.end();
+
+});

@@ -9,6 +9,7 @@ var reemit = require('re-emitter');
 
 var expr = require('./lib/utils/regexes');
 var parseLine = require('./lib/parse-line');
+var error = require('./lib/error');
 
 function Parser() {
   if (!(this instanceof Parser)) {
@@ -26,6 +27,7 @@ function Parser() {
     plans: [],
     pass: [],
     fail: [],
+    errors: [],
   };
   this.testNumber = 0;
 
@@ -190,6 +192,32 @@ Parser.prototype._handleError = function _handleError(line) {
   }
 };
 
+Parser.prototype._handleEnd = function _handleEnd() {
+  var plan = this.results.plans.length ? this.results.plans[0] : null;
+  var count = this.results.asserts.length;
+  var first = count && this.results.asserts.reduce(firstAssertion);
+  var last = count && this.results.asserts.reduce(lastAssertion);
+
+  if (!plan) {
+    if (count > 0) {
+      this.results.errors.push(error('no plan provided'));
+    }
+    return;
+  }
+
+  if (this.results.fail.length > 0) {
+    return;
+  }
+
+  if (count !== (plan.to - plan.from + 1)) {
+    this.results.errors.push(error('incorrect number of assertions made'));
+  } else if (first && first.number !== plan.from) {
+    this.results.errors.push(error('first assertion number does not equal the plan start'));
+  } else if (last && last.number !== plan.to) {
+    this.results.errors.push(error('last assertion number does not equal the plan end'));
+  }
+};
+
 module.exports = function (done) {
 
   done = done || function () {};
@@ -212,7 +240,10 @@ module.exports = function (done) {
       parser.handleLine(line);
     })
     .on('close', function () {
+      parser._handleEnd();
+
       stream.emit('output', parser.results);
+
       done(null, parser.results);
     })
     .on('error', done);
@@ -246,4 +277,12 @@ function isRawTapTestStatus (str) {
 
   var rawTapTestStatusRegex = new RegExp('(\\d+)(\\.)(\\.)(\\d+)');;
   return rawTapTestStatusRegex.exec(str);
+}
+
+function firstAssertion(first, assert) {
+  return assert.number < first.number ? assert : first;
+}
+
+function lastAssertion(last, assert) {
+  return assert.number > last.number ? assert : last;
 }

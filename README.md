@@ -19,17 +19,19 @@ $ something-that-produces-tap | tap-out
     { name: 'is true', number: 1, raw: '# is true', type: 'test' }
   ],
   asserts: [
-    { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' }, 
-    { name: 'true value', number: 2, ok: true, raw: 'ok 2 true value', test: 1, type: 'assert' }
-  ],
-  results: [],
-  versions: [],
-  comments: [],
-  fail: [],
-  pass: [ 
     { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' },
     { name: 'true value', number: 2, ok: true, raw: 'ok 2 true value', test: 1, type: 'assert' }
   ],
+  versions: [],
+  results: [],
+  comments: [],
+  plans: [{ type: 'plan', raw: '1..2', from: 1, to: 2, skip: false }],
+  pass: [
+    { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' },
+    { name: 'true value', number: 2, ok: true, raw: 'ok 2 true value', test: 1, type: 'assert' }
+  ],
+  fail: [],
+  errors: []
 }
 ```
 
@@ -39,7 +41,7 @@ $ something-that-produces-tap | tap-out
 var tapOut = require('tap-out');
 
 var t = tapOut(function (output) {
-  
+
   console.log(output);
 });
 
@@ -71,14 +73,14 @@ Example output
     { name: 'is true', number: 1, raw: '# is true', type: 'test' }
   ],
   asserts: [
-    { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' }, 
+    { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' },
     { name: 'true value', number: 2, ok: true, raw: 'ok 2 true value', test: 1, type: 'assert' }
   ],
   results: [],
   versions: [],
   comments: [],
   fail: [],
-  pass: [ 
+  pass: [
     { name: 'true value', number: 1, ok: true, raw: 'ok 1 true value', test: 1, type: 'assert' },
     { name: 'true value', number: 2, ok: true, raw: 'ok 2 true value', test: 1, type: 'assert' }
   ],
@@ -155,7 +157,7 @@ Tests
   count: '15',
   name: 'tests',
   raw: '# tests 15',
-  type: 'result' 
+  type: 'result'
 }
 ```
 
@@ -195,7 +197,7 @@ Generic output like `console.log()` in your tests.
 
 * `type` - this will always be `comment`
 * `raw` - the raw output before it was parsed
-* `test` - the nubmer of the test this comment belongs to
+* `test` - the number of the test this comment belongs to
 
 ```js
 {

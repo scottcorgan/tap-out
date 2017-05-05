@@ -67,6 +67,7 @@ Parser.prototype.handleLine = function handleLine(line) {
 
   // Invalid line
   if (!parsed) {
+    this.previousLine = line;
     return;
   }
 
@@ -104,6 +105,7 @@ Parser.prototype.handleLine = function handleLine(line) {
 };
 
 Parser.prototype._handleError = function _handleError(line) {
+  var lastAssert;
 
   // Start of error output
   if (isErrorOutputStart(line)) {
@@ -135,8 +137,8 @@ Parser.prototype._handleError = function _handleError(line) {
   }
   // Not the beginning of the error message but it's the body
   else if (this.writingErrorOutput) {
-    var lastAssert = this.results.fail[this.results.fail.length - 1];
     var m = splitFirst(trim(line), (':'));
+    lastAssert = this.results.fail[this.results.fail.length - 1];
 
     // Rebuild raw error output
     this.lastAsserRawErrorString += line + '\n';
@@ -190,6 +192,12 @@ Parser.prototype._handleError = function _handleError(line) {
       lastAssert.error[m[0]] = msg;
     }
   }
+  // Emit fail when error on previous line had no diagnostics
+  else if (this.previousLine && isFailAssertionLine(this.previousLine)) {
+    lastAssert = this.results.fail[this.results.fail.length - 1];
+
+    this.emit('fail', lastAssert);
+  }
 };
 
 Parser.prototype._handleEnd = function _handleEnd() {
@@ -197,6 +205,13 @@ Parser.prototype._handleEnd = function _handleEnd() {
   var count = this.results.asserts.length;
   var first = count && this.results.asserts.reduce(firstAssertion);
   var last = count && this.results.asserts.reduce(lastAssertion);
+
+  // Emit fail when error on previous line had no diagnostics
+  if (this.previousLine && isFailAssertionLine(this.previousLine)) {
+    var lastAssert = this.results.fail[this.results.fail.length - 1];
+
+    this.emit('fail', lastAssert);
+  }
 
   if (!plan) {
     if (count > 0) {
@@ -252,6 +267,11 @@ module.exports = function (done) {
 };
 
 module.exports.Parser = Parser;
+
+function isFailAssertionLine (line) {
+
+  return line.indexOf('not ok') === 0;
+}
 
 function isErrorOutputStart (line) {
 

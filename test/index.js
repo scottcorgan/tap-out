@@ -294,12 +294,15 @@ test('failed assertion', function (t) {
     "    actual:   'me'",
     "    at: Test.<anonymous> (/Users/scott/www/divshot/divshot-cli/test/index.js:8:5)",
     "  ...",
-    "not ok 15 plan != count",
+    "not ok 4 plan != count",
     "  ---",
     "    operator: fail",
     "    expected: 4",
     "    actual:   3",
     "  ...",
+    "ok 5 true value",
+    "not ok 6 - failure",
+    "not ok 15 - item not found",
     "",
     "1..15",
   ];
@@ -346,11 +349,29 @@ test('failed assertion', function (t) {
             ].join('\n')
           },
           name: 'plan != count',
-          number: 15,
+          number: 4,
           ok: false,
-          raw: 'not ok 15 plan != count',
+          raw: 'not ok 4 plan != count',
           test: 1,
           type: 'plan'
+        },
+        {
+          error: { actual: undefined, expected: undefined, operator: undefined, at: undefined },
+          name: 'failure',
+          number: 6,
+          ok: false,
+          raw: 'not ok 6 - failure',
+          test: 1,
+          type: 'assert'
+        },
+        {
+          error: { actual: undefined, expected: undefined, operator: undefined, at: undefined },
+          name: 'item not found',
+          number: 15,
+          ok: false,
+          raw: 'not ok 15 - item not found',
+          test: 1,
+          type: 'assert'
         }
       ],
       'fails'

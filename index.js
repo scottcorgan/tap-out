@@ -121,6 +121,7 @@ Parser.prototype._handleError = function _handleError(line) {
 
     if (this.tmpErrorOutput) {
       lastAssert.error.stack = this.tmpErrorOutput;
+      this.lastAsserRawErrorString += this.tmpErrorOutput + '\n';
       this.tmpErrorOutput = '';
     }
 

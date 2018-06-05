@@ -571,6 +571,64 @@ test('handles multiline error string with |-', function (t) {
 
 });
 
+test('handles multiline error stack with |-', function (t) {
+
+  t.plan(2);
+
+  var mockTap = [
+    "TAP version 13",
+    "# promise error",
+    "not ok 1 TypeError: foo",
+    "  ---",
+    "    operator: error",
+    "    expected: |-",
+    "      undefined",
+    "    actual: |-",
+    "      [TypeError: foo]",
+    "    at: process._tickCallback (internal/process/next_tick.js:103:7)",
+    "    stack: |-",
+    "      TypeError: foo",
+    "          at throwError (/Users/germ/Projects/a/b/test.js:17:9)",
+    "          at Promise.resolve.then (/Users/germ/Projects/a/b/test.js:24:5)",
+    "          at process._tickCallback (internal/process/next_tick.js:103:7)",
+    "  ...",
+    "",
+    "1..1",
+    "# tests 1",
+    "# pass  0",
+    "# fail  1"
+  ];
+
+  var p = parser();
+
+  p.on('output', function (output) {
+    var assert = output.fail[0];
+    t.equal(assert.error.stack, 'TypeError: foo\n'
+      + 'at throwError (/Users/germ/Projects/a/b/test.js:17:9)\n'
+      + 'at Promise.resolve.then (/Users/germ/Projects/a/b/test.js:24:5)\n'
+      + 'at process._tickCallback (internal/process/next_tick.js:103:7)\n'
+    );
+    t.equal(assert.error.raw, '    operator: error\n'
+      + '    expected: |-\n'
+      + '      undefined\n'
+      + '    actual: |-\n'
+      + '      [TypeError: foo]\n'
+      + '    at: process._tickCallback (internal/process/next_tick.js:103:7)\n'
+      + '    stack: |-\n'
+      + 'TypeError: foo\n'
+      + 'at throwError (/Users/germ/Projects/a/b/test.js:17:9)\n'
+      + 'at Promise.resolve.then (/Users/germ/Projects/a/b/test.js:24:5)\n'
+      + 'at process._tickCallback (internal/process/next_tick.js:103:7)'
+    );
+  });
+
+  mockTap.forEach(function (line) {
+    p.write(line + '\n');
+  });
+  p.end();
+
+});
+
 test('output without plan', function (t) {
 
   t.plan(1);

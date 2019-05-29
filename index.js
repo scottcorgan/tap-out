@@ -185,7 +185,7 @@ Parser.prototype._handleError = function _handleError(line) {
       lastAssert.error[this.currentNextLineError] = line.trim();
       this.currentNextLineError = null;
     }
-    else if (m[1].trim() === '|-') {
+    else if ((m[1] || '').trim() === '|-') {
       this.currentNextLineError = m[0];
     }
     else {

@@ -154,8 +154,8 @@ Parser.prototype._handleError = function _handleError(line) {
     if (m[0] === 'at') {
       // Example string: Object.async.eachSeries (/Users/scott/www/modules/nash/node_modules/async/lib/async.js:145:20)
 
-      msg = msg
-      .split(' ')[1]
+      msg = (msg
+      .split(' ')[1] || '')
       .replace('(', '')
       .replace(')', '');
 

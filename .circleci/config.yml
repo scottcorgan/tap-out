@@ -49,20 +49,20 @@ jobs:
     #         - store_test_results:
     #             path: ./reports
 
-    # build:
-    #     executor: builder
-    #     steps:
-    #         - attach_workspace:
-    #             at: .
-    #         - run:
-    #             name: Build
-    #             command: 'npm build'
-    #         - store_artifacts:
-    #             path: ./dist
-    #         - persist_to_workspace:
-    #             root: .
-    #             paths:
-    #                 - ./dist
+    build:
+        executor: builder
+        steps:
+            - attach_workspace:
+                at: .
+            - run:
+                name: Build
+                command: 'npm run build'
+            - store_artifacts:
+                path: ./dist
+            - persist_to_workspace:
+                root: .
+                paths:
+                    - ./dist
 
     publish-release:
         executor: builder
@@ -81,11 +81,11 @@ workflows:
             #     requires: [ setup ]
             - test:
                 requires: [ setup ]
-            # - build:
-            #     requires: [ lint, test ]
+            - build:
+                requires: [ test ]
             - publish-release:
                 requires:
-                    - test
+                    - build
                 filters:
                     branches:
                         only: master

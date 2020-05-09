@@ -1,9 +1,10 @@
 {
   "name": "tap-out",
-  "version": "3.0.0",
+  "version": "1.0.0",
   "description": "A different tap parser",
   "main": "index.js",
   "scripts": {
+    "build": "mkdirp dist && cd dist &&  npm pack ..",
     "test": "tape test/index.js"
   },
   "bin": {
@@ -23,6 +24,7 @@
     "split": "1.0.0"
   },
   "devDependencies": {
+    "mkdirp": "^1.0.4",
     "tape": "4.6.3"
   },
   "directories": {

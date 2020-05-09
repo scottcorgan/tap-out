@@ -57,12 +57,12 @@ jobs:
             - run:
                 name: Build
                 command: 'npm run build'
-            - store_artifacts:
-                path: ./dist
-            - persist_to_workspace:
-                root: .
-                paths:
-                    - ./dist
+            # - store_artifacts:
+            #     path: ./dist
+            # - persist_to_workspace:
+            #     root: .
+            #     paths:
+            #         - ./dist
 
     publish-release:
         executor: builder
@@ -71,7 +71,7 @@ jobs:
             at: .
         - run:
             name: Publish Release
-            command: npm release
+            command: npm publish --access public
 
 workflows:
     main:

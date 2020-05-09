@@ -1,5 +1,5 @@
 {
-  "name": "tap-out",
+  "name": "@chocpanda/tap-out",
   "version": "1.0.0",
   "description": "A different tap parser",
   "main": "index.js",

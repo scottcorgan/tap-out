@@ -1,0 +1,93 @@
+version: 2.1
+
+executors:
+  builder:
+    docker:
+      - image: circleci/node:latest
+
+jobs:
+    setup:
+        executor: builder
+        steps:
+        - checkout
+        - run:
+            name: update-npm
+            command: 'sudo npm install -g npm@latest'
+        - restore_cache:
+            key: dependency-cache-{{ checksum "package-lock.json" }}
+        - run:
+            name: install-npm-wee
+            command: npm install
+        - save_cache:
+            key: dependency-cache-{{ checksum "package-lock.json" }}
+            paths:
+              - ./node_modules
+        - persist_to_workspace:
+            root: .
+            paths:
+                - "*"
+
+    test:
+        executor: builder
+        steps:
+            - attach_workspace:
+                at: .
+            - run: # run unit tests
+                name: Unit Test
+                command: 'npm run test'
+
+    # lint:
+    #     executor: builder
+    #     steps:
+    #         - attach_workspace:
+    #             at: .
+    #         - run:
+    #             name: Lint Test
+    #             command: 'npm lint:report'
+    #         - store_artifacts:
+    #             path: ./reports
+    #         - store_test_results:
+    #             path: ./reports
+
+    build:
+        executor: builder
+        steps:
+            - attach_workspace:
+                at: .
+            - run:
+                name: Build
+                command: 'npm run build'
+            # - store_artifacts:
+            #     path: ./dist
+            # - persist_to_workspace:
+            #     root: .
+            #     paths:
+            #         - ./dist
+
+    publish-release:
+        executor: builder
+        steps:
+        - attach_workspace:
+            at: .
+        - run:
+            name: Publish Release
+            command: npm publish --access public
+
+workflows:
+    main:
+        jobs:
+            - setup
+            # - lint:
+            #     requires: [ setup ]
+            - test:
+                requires: [ setup ]
+            - build:
+                requires: [ test ]
+            - publish-release:
+                requires:
+                    - build
+                filters:
+                    branches:
+                        only: master
+                    tags:
+                        only: /^\d+\.\d+\.\d+$/

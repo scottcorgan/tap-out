@@ -1,15 +1,22 @@
 {
   "name": "tap-out",
-  "version": "3.0.0",
+  "version": "1.0.0",
   "description": "A different tap parser",
   "main": "index.js",
   "scripts": {
+    "build": "mkdirp dist && cd dist &&  npm pack ..",
     "test": "tape test/index.js"
   },
   "bin": {
     "tap-out": "bin/cmd.js"
   },
-  "author": "Scott Corgan",
+  "author": "Scott Corgan - Original",
+  "maintainers": [
+    {
+      "name": "ChocPnda",
+      "url": "https://github.com/ChocPanda/"
+    }
+  ],
   "license": "MIT",
   "dependencies": {
     "re-emitter": "1.1.3",
@@ -17,6 +24,7 @@
     "split": "1.0.0"
   },
   "devDependencies": {
+    "mkdirp": "^1.0.4",
     "tape": "4.6.3"
   },
   "directories": {
@@ -24,7 +32,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/scottcorgan/tap-out.git"
+    "url": "https://github.com/chocpanda/tap-out.git"
   },
   "keywords": [
     "tap",
@@ -34,7 +42,7 @@
     "test"
   ],
   "bugs": {
-    "url": "https://github.com/scottcorgan/tap-out/issues"
+    "url": "https://github.com/chocpanda/tap-out/issues"
   },
-  "homepage": "https://github.com/scottcorgan/tap-out"
+  "homepage": "https://github.com/chocpanda/tap-out"
 }

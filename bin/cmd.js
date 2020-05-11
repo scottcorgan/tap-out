@@ -1,20 +1,22 @@
 #!/usr/bin/env node
 
-var tapOut = require('../');
+const tapOut = require('../');
 
-var parser = tapOut(function (err, output) {
-  
+const parser = tapOut(function (err, output) {
+
   if (err) {
     throw err;
   }
-  
-  var out = output;
-  
+
+  let out = output;
+
   try {
     out = JSON.stringify(output, null, 2);
   }
-  catch (e) {}
-  
+  catch (e) {
+    console.error(e)
+  }
+
   process.stdout.write(out);
 });
 

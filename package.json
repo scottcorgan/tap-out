@@ -4,7 +4,7 @@
   "description": "A different tap parser",
   "main": "index.js",
   "scripts": {
-    "build": "mkdirp dist && cd dist &&  npm pack ..",
+    "build": "mkdirp dist && cd dist && npm pack ..",
     "test": "tape test/index.js"
   },
   "bin": {

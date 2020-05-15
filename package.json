@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "build": "mkdirp dist && cd dist && npm pack ..",
-    "test": "tape test/index.js"
+    "test": "tape test/index.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "bin": {
     "tap-out": "bin/cmd.js"
@@ -13,8 +15,12 @@
   "author": "Scott Corgan - Original",
   "maintainers": [
     {
-      "name": "ChocPnda",
+      "name": "ChocPanda",
       "url": "https://github.com/ChocPanda/"
+    },
+    {
+      "name": "Daneika",
+      "url": "https://github.com/Daneika/"
     }
   ],
   "license": "MIT",

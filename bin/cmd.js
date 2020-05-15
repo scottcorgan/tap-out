@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
-const tapOut = require('../');
+const tapOut = require("../");
 
 const parser = tapOut(function (err, output) {
-
   if (err) {
     throw err;
   }
@@ -12,9 +11,8 @@ const parser = tapOut(function (err, output) {
 
   try {
     out = JSON.stringify(output, null, 2);
-  }
-  catch (e) {
-    console.error(e)
+  } catch (e) {
+    console.error(e);
   }
 
   process.stdout.write(out);

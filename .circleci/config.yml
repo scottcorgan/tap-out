@@ -36,18 +36,18 @@ jobs:
                 name: Unit Test
                 command: 'npm run test'
 
-    # lint:
-    #     executor: builder
-    #     steps:
-    #         - attach_workspace:
-    #             at: .
-    #         - run:
-    #             name: Lint Test
-    #             command: 'npm lint:report'
-    #         - store_artifacts:
-    #             path: ./reports
-    #         - store_test_results:
-    #             path: ./reports
+    lint:
+        executor: builder
+        steps:
+            - attach_workspace:
+                at: .
+            - run:
+                name: Lint Test
+                command: 'npm run lint'
+            - store_artifacts:
+                path: ./reports
+            - store_test_results:
+                path: ./reports
 
     build:
         executor: builder
@@ -80,10 +80,10 @@ workflows:
     main:
         jobs:
             - setup
-            # - lint:
-            #     requires: [ setup ]
-            - test:
+            - lint:
                 requires: [ setup ]
+            - test:
+                requires: [ lint ]
             - build:
                 requires: [ test ]
             - publish-release:

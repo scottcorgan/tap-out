@@ -1,16 +1,15 @@
-'use strict';
+"use strict";
 
-const PassThrough = require('readable-stream/passthrough');
-const split = require('split');
-const util = require('util');
-const EventEmitter = require('events').EventEmitter;
-const reemit = require('re-emitter');
+const PassThrough = require("readable-stream/passthrough");
+const split = require("split");
+const util = require("util");
+const EventEmitter = require("events").EventEmitter;
+const reemit = require("re-emitter");
 
-const expr = require('./lib/utils/regexes');
-const parseLine = require('./lib/parse-line');
-const error = require('./lib/error');
+const parseLine = require("./lib/parse-line");
+const error = require("./lib/error");
 
-function Parser() {
+function Parser () {
   if (!(this instanceof Parser)) {
     return new Parser();
   }
@@ -26,21 +25,20 @@ function Parser() {
     plans: [],
     pass: [],
     fail: [],
-    errors: [],
+    errors: []
   };
   this.testNumber = 0;
 
-  this.previousLine = '';
+  this.previousLine = "";
   this.currentNextLineError = null;
   this.writingErrorOutput = false;
   this.writingErrorStackOutput = false;
-  this.tmpErrorOutput = '';
+  this.tmpErrorOutput = "";
 }
 
 util.inherits(Parser, EventEmitter);
 
-Parser.prototype.handleLine = function handleLine(line) {
-
+Parser.prototype.handleLine = function handleLine (line) {
   const parsed = parseLine(line);
 
   // This will handle all the error stuff
@@ -49,20 +47,19 @@ Parser.prototype.handleLine = function handleLine(line) {
   // This is weird, but it's the only way to distinguish a
   // console.log type output from an error output
   if (
-    !this.writingErrorOutput
-    && !parsed
-    && !isErrorOutputEnd(line)
-    && !isRawTapTestStatus(line)
-    )
-      {
-          const comment = {
-            type: 'comment',
-            raw: line,
-            test: this.testNumber
-          };
-          this.emit('comment', comment);
-          this.results.comments.push(comment);
-      }
+    !this.writingErrorOutput &&
+    !parsed &&
+    !isErrorOutputEnd(line) &&
+    !isRawTapTestStatus(line)
+  ) {
+    const comment = {
+      type: "comment",
+      raw: line,
+      test: this.testNumber
+    };
+    this.emit("comment", comment);
+    this.results.comments.push(comment);
+  }
 
   // Invalid line
   if (!parsed) {
@@ -71,111 +68,103 @@ Parser.prototype.handleLine = function handleLine(line) {
   }
 
   // Handle tests
-  if (parsed.type === 'test') {
+  if (parsed.type === "test") {
     this.testNumber += 1;
     parsed.number = this.testNumber;
   }
 
   // Handle asserts
-  if (parsed.type === 'assert') {
+  if (parsed.type === "assert") {
     parsed.test = this.testNumber;
-    this.results[parsed.ok ? 'pass' : 'fail'].push(parsed);
+    this.results[parsed.ok ? "pass" : "fail"].push(parsed);
 
     if (parsed.ok) {
       // No need to have the error object
       // in a passing assertion
       delete parsed.error;
-      this.emit('pass', parsed);
+      this.emit("pass", parsed);
     }
   }
 
   if (!isOkLine(this.previousLine)) {
     this.emit(parsed.type, parsed);
-    this.results[parsed.type + 's'].push(parsed);
+    this.results[parsed.type + "s"].push(parsed);
   }
 
   // This is all so we can determine if the "# ok" output on the last line
   // should be skipped
   function isOkLine (previousLine) {
-
-    return line === '# ok' && previousLine.indexOf('# pass') > -1;
+    return line === "# ok" && previousLine.indexOf("# pass") > -1;
   }
   this.previousLine = line;
 };
 
-Parser.prototype._handleError = function _handleError(line) {
+Parser.prototype._handleError = function _handleError (line) {
   let lastAssert;
 
-  // Start of error output
   if (isErrorOutputStart(line)) {
     this.writingErrorOutput = true;
-    this.lastAsserRawErrorString = '';
-  }
-  // End of error output
-  else if (isErrorOutputEnd(line)) {
+    this.lastAsserRawErrorString = "";
+  } else if (isErrorOutputEnd(line)) {
     this.writingErrorOutput = false;
     this.currentNextLineError = null;
     this.writingErrorStackOutput = false;
 
     // Emit error here so it has the full error message with it
-    let lastAssert = this.results.fail[this.results.fail.length - 1];
+    const lastAssert = this.results.fail[this.results.fail.length - 1];
 
     if (this.tmpErrorOutput) {
       lastAssert.error.stack = this.tmpErrorOutput;
-      this.lastAsserRawErrorString += this.tmpErrorOutput + '\n';
-      this.tmpErrorOutput = '';
+      this.lastAsserRawErrorString += this.tmpErrorOutput + "\n";
+      this.tmpErrorOutput = "";
     }
 
     // right-trimmed raw error string
-    lastAssert.error.raw = this.lastAsserRawErrorString.replace(/\s+$/g, '');
+    lastAssert.error.raw = this.lastAsserRawErrorString.replace(/\s+$/g, "");
 
-    this.emit('fail', lastAssert);
-  }
-  // Append to stack
-  else if (this.writingErrorStackOutput) {
-    this.tmpErrorOutput += line?.trim() + '\n';
-  }
-  // Not the beginning of the error message but it's the body
-  else if (this.writingErrorOutput) {
-    const m = splitFirst(line?.trim(), (':'));
+    this.emit("fail", lastAssert);
+  } else if (this.writingErrorStackOutput) {
+    this.tmpErrorOutput += line?.trim() + "\n";
+  } else if (this.writingErrorOutput) {
+    const m = splitFirst(line?.trim(), (":"));
     lastAssert = this.results.fail[this.results.fail.length - 1];
 
     // Rebuild raw error output
-    this.lastAsserRawErrorString += line + '\n';
+    this.lastAsserRawErrorString += line + "\n";
 
-    if (m[0] === 'stack') {
+    if (m[0] === "stack") {
       this.writingErrorStackOutput = true;
       return;
     }
 
-    let msg = m[1]?.replace(/['"]+/g, '')?.trim();
+    let msg = m[1]?.replace(/['"]+/g, "")?.trim();
 
-    if (m[0] === 'at') {
+    if (m[0] === "at") {
       // Example string: Object.async.eachSeries (/Users/scott/www/modules/nash/node_modules/async/lib/async.js:145:20)
 
       msg = msg
-      .split(' ')[1]
-      .replace('(', '')
-      .replace(')', '');
+        .split(" ")[1]
+        .replace("(", "")
+        .replace(")", "");
 
-      const values = msg.split(':');
-      const file = values.slice(0, values.length-2).join(':');
+      const values = msg.split(":");
+      const file = values.slice(0, values.length - 2).join(":");
 
       msg = {
         file: file,
-        line: values[values.length-2],
-        character: values[values.length-1]
+        line: values[values.length - 2],
+        character: values[values.length - 1]
       };
     }
 
     // This is a plan failure
-    if (lastAssert.name === 'plan != count') {
-      lastAssert.type = 'plan';
+    if (lastAssert.name === "plan != count") {
+      lastAssert.type = "plan";
       delete lastAssert.error.at;
-      lastAssert.error.operator = 'count';
+      lastAssert.error.operator = "count";
 
       // Need to set this value
-      if (m[0] === 'actual') {
+      if (m[0] === "actual") {
         lastAssert.error.actual = m[1]?.trim();
       }
     }
@@ -184,23 +173,20 @@ Parser.prototype._handleError = function _handleError(line) {
     if (this.currentNextLineError) {
       lastAssert.error[this.currentNextLineError] = line?.trim();
       this.currentNextLineError = null;
-    }
-    else if (m[1]?.trim() === '|-') {
+    } else if (m[1]?.trim() === "|-") {
       this.currentNextLineError = m[0];
-    }
-    else {
+    } else {
       lastAssert.error[m[0]] = msg;
     }
-  }
-  // Emit fail when error on previous line had no diagnostics
-  else if (this.previousLine && isFailAssertionLine(this.previousLine)) {
+  } else if (this.previousLine && isFailAssertionLine(this.previousLine)) {
+    // Emit fail when error on previous line had no diagnostics
     lastAssert = this.results.fail[this.results.fail.length - 1];
 
-    this.emit('fail', lastAssert);
+    this.emit("fail", lastAssert);
   }
 };
 
-Parser.prototype._handleEnd = function _handleEnd() {
+Parser.prototype._handleEnd = function _handleEnd () {
   const plan = this.results.plans.length ? this.results.plans[0] : null;
   const count = this.results.asserts.length;
   const first = count && this.results.asserts.reduce(firstAssertion);
@@ -210,12 +196,12 @@ Parser.prototype._handleEnd = function _handleEnd() {
   if (this.previousLine && isFailAssertionLine(this.previousLine)) {
     const lastAssert = this.results.fail[this.results.fail.length - 1];
 
-    this.emit('fail', lastAssert);
+    this.emit("fail", lastAssert);
   }
 
   if (!plan) {
     if (count > 0) {
-      this.results.errors.push(error('no plan provided'));
+      this.results.errors.push(error("no plan provided"));
     }
     return;
   }
@@ -225,28 +211,26 @@ Parser.prototype._handleEnd = function _handleEnd() {
   }
 
   if (count !== (plan.to - plan.from + 1)) {
-    this.results.errors.push(error('incorrect number of assertions made'));
+    this.results.errors.push(error("incorrect number of assertions made"));
   } else if (first && first.number !== plan.from) {
-    this.results.errors.push(error('first assertion number does not equal the plan start'));
+    this.results.errors.push(error("first assertion number does not equal the plan start"));
   } else if (last && last.number !== plan.to) {
-    this.results.errors.push(error('last assertion number does not equal the plan end'));
+    this.results.errors.push(error("last assertion number does not equal the plan end"));
   }
 };
 
 module.exports = function (done) {
-
   done = done || function () {};
 
   const stream = new PassThrough();
   const parser = Parser();
   reemit(parser, stream, [
-    'test', 'assert', 'version', 'result', 'pass', 'fail', 'comment', 'plan'
+    "test", "assert", "version", "result", "pass", "fail", "comment", "plan"
   ]);
 
   stream
     .pipe(split())
-    .on('data', function (data) {
-
+    .on("data", function (data) {
       if (!data) {
         return;
       }
@@ -254,14 +238,14 @@ module.exports = function (done) {
       const line = data.toString();
       parser.handleLine(line);
     })
-    .on('close', function () {
+    .on("close", function () {
       parser._handleEnd();
 
-      stream.emit('output', parser.results);
+      stream.emit("output", parser.results);
 
       done(null, parser.results);
     })
-    .on('error', done);
+    .on("error", done);
 
   return stream;
 };
@@ -269,22 +253,18 @@ module.exports = function (done) {
 module.exports.Parser = Parser;
 
 function isFailAssertionLine (line) {
-
-  return line.indexOf('not ok') === 0;
+  return line.indexOf("not ok") === 0;
 }
 
 function isErrorOutputStart (line) {
-
-  return line.indexOf('  ---') === 0;
+  return line.indexOf("  ---") === 0;
 }
 
 function isErrorOutputEnd (line) {
-
-  return line.indexOf('  ...') === 0;
+  return line.indexOf("  ...") === 0;
 }
 
-function splitFirst(str, pattern) {
-
+function splitFirst (str, pattern) {
   const parts = str.split(pattern);
   if (parts.length <= 1) {
     return parts;
@@ -294,15 +274,14 @@ function splitFirst(str, pattern) {
 }
 
 function isRawTapTestStatus (str) {
-
-  const rawTapTestStatusRegex = new RegExp('(\\d+)(\\.)(\\.)(\\d+)');;
+  const rawTapTestStatusRegex = new RegExp("(\\d+)(\\.)(\\.)(\\d+)");
   return rawTapTestStatusRegex.exec(str);
 }
 
-function firstAssertion(first, assert) {
+function firstAssertion (first, assert) {
   return assert.number < first.number ? assert : first;
 }
 
-function lastAssertion(last, assert) {
+function lastAssertion (last, assert) {
   return assert.number > last.number ? assert : last;
 }

@@ -281,7 +281,7 @@ function isErrorOutputStart (line) {
 
 function isErrorOutputEnd (line) {
 
-  return line.indexOf('  ...') === 0;
+  return line === '  ...';
 }
 
 function splitFirst(str, pattern) {

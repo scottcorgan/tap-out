@@ -4,7 +4,7 @@
   "description": "A different tap parser",
   "main": "index.js",
   "scripts": {
-    "test": "tape test/index.js"
+    "test": "npx tape test/index.js"
   },
   "bin": {
     "tap-out": "bin/cmd.js"
@@ -15,7 +15,7 @@
     "re-emitter": "1.1.3",
     "readable-stream": "2.2.9",
     "split": "1.0.0",
-    "trim": "0.0.1"
+    "trim": "^1.0.1"
   },
   "devDependencies": {
     "tape": "4.6.3"

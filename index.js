@@ -244,8 +244,22 @@ module.exports = function (done) {
     'test', 'assert', 'version', 'result', 'pass', 'fail', 'comment', 'plan'
   ]);
 
-  stream
-    .pipe(split())
+  var write = stream.write;
+  var end = stream.end;
+
+  var splitStream = split();
+
+  stream.write = function() {
+    write.apply(stream, arguments);
+    splitStream.write.apply(splitStream, arguments);
+  };
+
+  stream.end = function() {
+    end.apply(stream, arguments);
+    splitStream.end.apply(splitStream, arguments);
+  };
+
+  splitStream
     .on('data', function (data) {
 
       if (!data) {
@@ -255,7 +269,7 @@ module.exports = function (done) {
       var line = data.toString();
       parser.handleLine(line);
     })
-    .on('close', function () {
+    .on('end', function () {
       parser._handleEnd();
 
       stream.emit('output', parser.results);

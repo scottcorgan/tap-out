@@ -2,6 +2,9 @@
 
 A different tap parser
 
+This is a fork of https://github.com/scottcorgan/tap-out maintained by [Nicolas Lochet](https://github.com/nicocube)
+
+
 ## Install
 
 ```

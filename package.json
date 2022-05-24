@@ -9,7 +9,7 @@
   "bin": {
     "tap-out": "bin/cmd.js"
   },
-  "author": "Nicolas Lochet",
+  "author": "Scott Corgan - original",
   "license": "MIT",
   "dependencies": {
     "re-emitter": "1.1.3",

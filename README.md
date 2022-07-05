@@ -4,6 +4,8 @@ A different tap parser
 
 This is a fork of https://github.com/scottcorgan/tap-out maintained by [Nicolas Lochet](https://github.com/nicocube)
 
+NPM package available: [![version](https://img.shields.io/npm/v/@freecube/tap-out)](https://www.npmjs.com/package/@freecube/tap-out)
+
 
 ## Install
 

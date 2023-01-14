@@ -155,9 +155,10 @@ Parser.prototype._handleError = function _handleError(line) {
       // Example string: Object.async.eachSeries (/Users/scott/www/modules/nash/node_modules/async/lib/async.js:145:20)
 
       msg = msg
+      .split(' ')[1] ? msg
       .split(' ')[1]
       .replace('(', '')
-      .replace(')', '');
+      .replace(')', '') : msg;
 
       var values = msg.split(':');
       var file = values.slice(0, values.length-2).join(':');

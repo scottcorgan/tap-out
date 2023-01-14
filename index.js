@@ -106,7 +106,6 @@ Parser.prototype.handleLine = function handleLine(line) {
 
 Parser.prototype._handleError = function _handleError(line) {
   var lastAssert;
-
   // Start of error output
   if (isErrorOutputStart(line)) {
     this.writingErrorOutput = true;
@@ -155,9 +154,10 @@ Parser.prototype._handleError = function _handleError(line) {
       // Example string: Object.async.eachSeries (/Users/scott/www/modules/nash/node_modules/async/lib/async.js:145:20)
 
       msg = msg
+      .split(' ')[1] ? msg
       .split(' ')[1]
       .replace('(', '')
-      .replace(')', '');
+      .replace(')', '') : msg;
 
       var values = msg.split(':');
       var file = values.slice(0, values.length-2).join(':');
@@ -186,7 +186,7 @@ Parser.prototype._handleError = function _handleError(line) {
       lastAssert.error[this.currentNextLineError] = trim(line);
       this.currentNextLineError = null;
     }
-    else if (trim(m[1]) === '|-') {
+    else if (trim(m.at(-1)) === '|-' || trim(m.at(-1)) === '>-') {
       this.currentNextLineError = m[0];
     }
     else {

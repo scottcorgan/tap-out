@@ -650,6 +650,86 @@ test('handles multiline error stack with |-', function (t) {
 
 });
 
+test('handles error stack with function that has no name', function (t) {
+
+  t.plan(2);
+
+  var mockTap = [
+    "TAP version 13",
+    "# promise error",
+    "not ok 1 TypeError: foo",
+    "  ---",
+    "    name: AssertionError",
+    "    assertion: 'true'",
+    "    at: 'internal/process/next_tick.js:103:7'",
+    "  ...",
+    "",
+    "1..1",
+    "# tests 1",
+    "# pass  0",
+    "# fail  1"
+  ];
+
+  var p = parser();
+
+  p.on('output', function (output) {
+    var assert = output.fail[0];
+    t.equal(assert.ok, false);
+    t.looseEqual(assert.error.at, {
+        character: '7',
+        file: 'internal/process/next_tick.js',
+        line: '103'
+    });
+  });
+
+  mockTap.forEach(function (line) {
+    p.write(line + '\n');
+  });
+  p.end();
+
+});
+
+test('handles error stack with multiple error function lines', function (t) {
+
+  t.plan(2);
+
+  var mockTap = [
+    "TAP version 13",
+    "# promise error",
+    "not ok 1 TypeError: foo",
+    "  ---",
+    "    name: AssertionError",
+    "    message: Rejected promise returned by test",
+    "    assertion: 'true'",
+    "    values:",
+    "     'Rejected promise returned by test. Reason:': |-",
+    "       Error {",
+    "         message: 'expected 200 \"OK\", got 301 \"Moved Permanently\"',",
+    "       }",
+    "    at: >-",
+    "     integration_tests/ava_apiV3Tests.js:116:4",
+    "  ...",
+    "",
+    "1..1",
+    "# tests 1",
+    "# pass  0",
+    "# fail  1"
+  ];
+
+  var p = parser();
+
+  p.on('output', function (output) {
+    var assert = output.fail[0];
+    t.equal(assert.ok, false);
+  });
+
+  mockTap.forEach(function (line) {
+    p.write(line + '\n');
+  });
+  p.end();
+
+});
+
 test('output without plan', function (t) {
 
   t.plan(1);
